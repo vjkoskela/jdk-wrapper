@@ -20,7 +20,7 @@ Usage
 Simply set your desired JDK version and wrap your command relying on the JDK
 with a call to the jdk-wrapper.sh script.
 
-    > JDKW_VERSION=8u65 JDKW_BUILD=13 jdk-wrapper.sh <CMD>
+    > JDKW_VERSION=8u65 JDKW_BUILD=b17 jdk-wrapper.sh <CMD>
 
 The wrapper script will download and cache the specified JDK version and set JAVA_HOME appropriately before executing the specified command.
 
@@ -28,14 +28,14 @@ The wrapper script will download and cache the specified JDK version and set JAV
 
 Configuration is performed using environment variables:
 
-* JDKW_VERSION : Version identifier (e.g. 8u65). Required.
-* JDKW_BUILD : Build identifier (e.g. b17). Required.
-* JDKW_TARGET : Target directory (e.g. /var/tmp). Optional.
+* JDKW_VERSION : Version identifier (e.g. '8u65'). Required.
+* JDKW_BUILD : Build identifier (e.g. 'b17'). Required.
+* JDKW_TARGET : Target directory (e.g. '/var/tmp'). Optional.
 * JDKW_PLATFORM : Platform specifier (e.g. 'linux-x64'). Optional.
 * JDKW_EXTENSION : Archive extension (e.g. 'tar.gz'). Optional.
 
-The default target directory is ~/.jdk.
-The default platform is detected using uname.
+The default target directory is ~/.jdk.<br/>
+The default platform is detected using uname.<br/>
 By default the extension dmg is used for Darwin and tar.gz for other platforms.
 
 ### Version and Build
@@ -54,7 +54,7 @@ Archived versions of JDK8 are [listed here](http://www.oracle.com/technetwork/ja
 
 ### Caching
 
-The Oracle JDK versions specified over all invocations of the jdk-wrapper.sh script are cached in the directory specified by JDKW_TARGET environment variable in perpetuity. It is recommended that you purge the cache periodically.
+The Oracle JDK versions specified over all invocations of the jdk-wrapper.sh script are cached in the directory specified by JDKW_TARGET environment variable in perpetuity. It is recommended that you purge the cache periodically to prevent it from growing unbounded.
 
 ### Travis
 
@@ -72,10 +72,10 @@ Second, configure the JDKW_VERSION and JDKW_BUILD environment variables to speci
 env:
   global:
   - JDKW_VERSION=8u65
-  - JDKW_BUILD=17
+  - JDKW_BUILD=b17
 ```
 
-Please refer to the [Travis documentation](https://docs.travis-ci.com/) for how to configure matrix builds by specifying multiple pairs of JDKW_VERSION and JDKW_BUILD parameters.
+To build against multiple versions of the Oracle JDK please refer to the [Travis documentation](https://docs.travis-ci.com/) for how to configure matrix builds.
 
 Finally, invoke your build command using the jdk-wrapper script. The following assumes you have downloaded and included jdk-wrapper.sh in your project.
 
