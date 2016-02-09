@@ -9,4 +9,4 @@ env:
 install: true
 script:
 - ./jdk-wrapper.sh javac -version
-- if [ ! -d "/home/travis/.jdk/8u65_b17_linux-i586/jdk1.8.0_65" ]; then exit 1; fi;
+- if [ "$(./jdk-wrapper.sh javac -version 2>&1 | tail -n 1)" != "javac 1.8.0_65" ]; then exit 1; fi;

@@ -58,7 +58,7 @@ if [ -z "${JDKW_TARGET}" ]; then
 fi
 if [ -z "${JDKW_PLATFORM}" ]; then
   os=`uname`
-  architecture=`uname -a`
+  architecture=`uname -m`
   if [ $? -ne 0 ]; then
     echo "Optional JDKW_PLATFORM (e.g. macosx-x64) envrionment variable not set and unable to determine a reasonable default"
     exit 1
@@ -157,11 +157,9 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
     exit 1
   fi
 
-  # Done
+  # Installation complete
   popd &> /dev/null
 fi
-
-find ${JDKW_TARGET}/${jdkid}
 
 # Setup the environment
 echo "Environment:"
