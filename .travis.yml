@@ -7,4 +7,5 @@ env:
   - JDKW_VERSION=8u65
   - JDKW_BUILD=17
 script:
-- if [ "$(./jdk-wrapper.sh javac -version 2>&1)" != "javac 1.8.0_65" ]; then exit 1; fi;
+- ./jdk-wrapper.sh javac -version 2>&1 | tee javac.version
+- if [ "$(cat javac.version | tail -n 1)" != "javac 1.8.0_65" ]; then exit 1; fi;
