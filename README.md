@@ -7,6 +7,11 @@ _By using this script you agree to the license agreement specified for all
 versions of the Oracle JDK you invoke this script for. The author(s) assume no
 responsibility for compliance with the Oracle JDK license agreement. Please see [LICENSE](LICENSE) for additional conditions of use._
 
+<a href="https://travis-ci.org/vjkoskela/jdk-wrapper/">
+    <img src="https://travis-ci.org/vjkoskela/jdk-wrapper.png"
+         alt="Travis Build">
+</a>
+
 Provides automatic download, unpacking and usage of specific Oracle JDK versions to faciliate repeatable builds of Java based software.
 
 Usage
@@ -65,9 +70,12 @@ Second, configure the JDKW_VERSION and JDKW_BUILD environment variables to speci
 
 ```yml
 env:
-- JDKW_VERSION=8u65
-- JDKW_BUILD=17
+  global:
+  - JDKW_VERSION=8u65
+  - JDKW_BUILD=17
 ```
+
+Please refer to the [Travis documentation](https://docs.travis-ci.com/) for how to configure matrix builds by specifying multiple pairs of JDKW_VERSION and JDKW_BUILD parameters.
 
 Finally, invoke your build command using the jdk-wrapper script. The following assumes you have downloaded and included jdk-wrapper.sh in your project.
 
