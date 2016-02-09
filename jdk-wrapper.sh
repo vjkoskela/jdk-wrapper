@@ -54,6 +54,7 @@ if [ -z "${JDKW_BUILD}" ]; then
 fi
 if [ -z "${JDKW_TARGET}" ]; then
   JDKW_TARGET="${HOME}/.jdk"
+  echo "Defaulted to target ${JDKW_TARGET}"
 fi
 if [ -z "${JDKW_PLATFORM}" ]; then
   os=`uname`
@@ -82,6 +83,7 @@ if [ -z "${JDKW_PLATFORM}" ]; then
       echo "Optional JDKW_PLATFORM (e.g. macosx-x64) envrionment variable not set and unable to determine a reasonable default"
       exit 1
     fi
+    echo "Detected platform ${JDKW_PLATFORM}"
   fi
 fi
 extension="tar.gz"
@@ -90,16 +92,21 @@ if [ "${JDKW_PLATFORM}" == "macosx-x64" ]; then
 fi
 if [ -z "${JDKW_EXTENSION}" ]; then
   JDKW_EXTENSION=${extension}
+else
+  echo "Defaulted to extension ${JDKW_EXTENSION}"
 fi
 
 # Ensure target directory exists
 if [ ! -d ${JDKW_TARGET} ]; then
+  echo "Creating target directory ${JDKW_TARGET}"
   mkdir -p ${JDKW_TARGET}
 fi
 
 # Download and install desired jdk version
 jdkid="${JDKW_VERSION}_${JDKW_BUILD}_${JDKW_PLATFORM}"
 if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
+  echo "Desired JDK version ${jdkid} not found"
+
   # Create target directory
   mkdir -p "${JDKW_TARGET}/${jdkid}"
   pushd "${JDKW_TARGET}/${jdkid}" &> /dev/null
@@ -107,6 +114,7 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   archive="jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}"
 
   # Download archive
+  echo "Downloading JDK from ${url}"
   if hash wget 2> /dev/null; then
     wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" -O ${archive} ${url}
   elif hash curl 2> /dev/null; then
@@ -123,6 +131,7 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   fi
 
   # Extract based on extension
+  echo "Unpacking ${JDKW_EXTENSION}..."
   if [ "${JDKW_EXTENSION}" == "tar.gz" ]; then
     tar -xzf ${archive}
     package=`ls | grep "jdk[^-].*" | head -n 1`
@@ -141,6 +150,7 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
     echo "Unsupported extension ${JDKW_EXTENSION}"
     exit 1
   fi
+  echo "export PATH=\"\$JAVA_HOME/bin:\$PATH\"" >> "${JDKW_TARGET}/${jdkid}/environment"
   if [ $? -ne 0 ]; then
     echo "Extract failed of ${archive}"
     rm -rf "${JDKW_TARGET}/${jdkid}"
@@ -151,9 +161,16 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   popd &> /dev/null
 fi
 
-# Set environment variables
+find ${JDKW_TARGET}/${jdkid}
+
+# Setup the environment
+echo "Environment:"
+cat ${JDKW_TARGET}/${jdkid}/environment
 source "${JDKW_TARGET}/${jdkid}/environment"
 
 # Execute the provided command
-$@
+echo "Executing:"
+echo "$@"
+eval $@
+exit $?
 
