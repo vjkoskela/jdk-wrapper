@@ -1,0 +1,9 @@
+cache:
+  directories:
+  - $HOME/.jdk
+sudo: false
+env:
+- JDKW_VERSION=8u65
+- JDKW_BUILD=17
+script:
+- if [ `./jdk-wrapper.sh javac -version` != "javac 1.8.0_65" ]; then exit 1 fi;
