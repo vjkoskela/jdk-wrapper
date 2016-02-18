@@ -38,29 +38,57 @@
 # JDKW_TARGET : Target directory (e.g. /var/tmp). Optional.
 # JDKW_PLATFORM : Platform specifier (e.g. 'linux-x64'). Optional.
 # JDKW_EXTENSION : Archive extension (e.g. 'tar.gz'). Optional.
+# JDKW_VERBOSE : Log wrapper actions to standard out. Optional.
 #
 # By default the target directory is ~/.jdk.
 # By default the platform is detected using uname.
 # By default the extension dmg is used for Darwin and tar.gz for Linux/Solaris.
+# By default the wrapper does not log.
+
+function log_err() {
+  echo -e "$@" 1>&2;
+}
+
+function log_out() {
+  if [ -n "${JDKW_VERBOSE}" ]; then
+    echo -e "$@"
+  fi
+}
+
+function safe_command {
+  local l_command=$1
+  local l_prefix=`date  +'%H:%M:%S'`
+  log_out "[${l_prefix}] ${l_command}";
+  eval $1
+  local l_result=$?
+  if [ "${l_result}" -ne "0" ]; then
+    log_err "ERROR: ${l_command} failed with ${l_result}"
+    exit 1
+  fi
+}
+
+# Default curl/wget options
+CURL_OPTIONS=""
+WGET_OPTIONS=""
 
 # Configuration from environment
 if [ -z "${JDKW_VERSION}" ]; then
-  echo "Required JDKW_VERSION (e.g. 8u65) environment variable not set"
+  log_err "Required JDKW_VERSION (e.g. 8u65) environment variable not set"
   exit 1
 fi
 if [ -z "${JDKW_BUILD}" ]; then
-  echo "Required JDKW_BUILD (e.g. b17) environment variable not set"
+  log_err "Required JDKW_BUILD (e.g. b17) environment variable not set"
   exit 1
 fi
 if [ -z "${JDKW_TARGET}" ]; then
   JDKW_TARGET="${HOME}/.jdk"
-  echo "Defaulted to target ${JDKW_TARGET}"
+  log_out "Defaulted to target ${JDKW_TARGET}"
 fi
 if [ -z "${JDKW_PLATFORM}" ]; then
   os=`uname`
   architecture=`uname -m`
   if [ $? -ne 0 ]; then
-    echo "Optional JDKW_PLATFORM (e.g. macosx-x64) envrionment variable not set and unable to determine a reasonable default"
+    log_err "Optional JDKW_PLATFORM (e.g. macosx-x64) environment variable not set and unable to determine a reasonable default"
     exit 1
   else
     if [ "${os}" == "Darwin" ]; then
@@ -80,10 +108,10 @@ if [ -z "${JDKW_PLATFORM}" ]; then
         JDKW_PLATFORM="solaris-x64"
       fi
     else
-      echo "Optional JDKW_PLATFORM (e.g. macosx-x64) envrionment variable not set and unable to determine a reasonable default"
+      log_err "Optional JDKW_PLATFORM (e.g. macosx-x64) environment variable not set and unable to determine a reasonable default"
       exit 1
     fi
-    echo "Detected platform ${JDKW_PLATFORM}"
+    log_out "Detected platform ${JDKW_PLATFORM}"
   fi
 fi
 extension="tar.gz"
@@ -93,47 +121,51 @@ fi
 if [ -z "${JDKW_EXTENSION}" ]; then
   JDKW_EXTENSION=${extension}
 else
-  echo "Defaulted to extension ${JDKW_EXTENSION}"
+  log_out "Defaulted to extension ${JDKW_EXTENSION}"
+fi
+if [ -z "${JDKW_VERBOSE}" ]; then
+  CURL_OPTIONS="${CURL_OPTIONS} --silent"
+  WGET_OPTIONS="${WGET_OPTIONS} --quiet"
 fi
 
 # Ensure target directory exists
 if [ ! -d ${JDKW_TARGET} ]; then
-  echo "Creating target directory ${JDKW_TARGET}"
-  mkdir -p ${JDKW_TARGET}
+  log_out "Creating target directory ${JDKW_TARGET}"
+  safe_command "mkdir -p \"${JDKW_TARGET}\""
 fi
 
 # Download and install desired jdk version
 jdkid="${JDKW_VERSION}_${JDKW_BUILD}_${JDKW_PLATFORM}"
 if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
-  echo "Desired JDK version ${jdkid} not found"
+  log_out "Desired JDK version ${jdkid} not found"
 
   # Create target directory
-  mkdir -p "${JDKW_TARGET}/${jdkid}"
-  pushd "${JDKW_TARGET}/${jdkid}" &> /dev/null
+  safe_command "mkdir -p \"${JDKW_TARGET}/${jdkid}\""
+  safe_command "pushd \"${JDKW_TARGET}/${jdkid}\" &> /dev/null"
   url="http://download.oracle.com/otn-pub/java/jdk/${JDKW_VERSION}-${JDKW_BUILD}/jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}"
   archive="jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}"
 
   # Download archive
-  echo "Downloading JDK from ${url}"
+  log_out "Downloading JDK from ${url}"
   if hash wget 2> /dev/null; then
-    wget --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" -O ${archive} ${url}
+    safe_command "wget ${WGET_OPTIONS} --no-check-certificate --no-cookies --header \"Cookie: oraclelicense=accept-securebackup-cookie\" -O \"${archive}\" \"${url}\""
   elif hash curl 2> /dev/null; then
-    curl -v -j -k -L -H "Cookie: oraclelicense=accept-securebackup-cookie" ${url} > ${archive}
+    safe_command "curl ${CURL_OPTIONS} -j -k -L -H \"Cookie: oraclelicense=accept-securebackup-cookie\" -o \"${archive}\" \"${url}\""
   else
-    echo "Could not find curl or wget; aborting..."
-    rm -rf "${JDKW_TARGET}/${jdkid}"
+    log_err "Could not find curl or wget; aborting..."
+    safe_command "rm -rf \"${JDKW_TARGET}/${jdkid}\""
     exit 1
   fi
   if [ $? -ne 0 ]; then
-    echo "Download failed of ${url}"
-    rm -rf "${JDKW_TARGET}/${jdkid}"
+    log_err "Download failed of ${url}"
+    safe_command "rm -rf \"${JDKW_TARGET}/${jdkid}\""
     exit 1
   fi
 
   # Extract based on extension
-  echo "Unpacking ${JDKW_EXTENSION}..."
+  log_out "Unpacking ${JDKW_EXTENSION}..."
   if [ "${JDKW_EXTENSION}" == "tar.gz" ]; then
-    tar -xzf ${archive}
+    safe_command "tar -xzf \"${archive}\""
     package=`ls | grep "jdk[^-].*" | head -n 1`
     echo "export JAVA_HOME=\"${JDKW_TARGET}/${jdkid}/${package}\"" > "${JDKW_TARGET}/${jdkid}/environment"
   elif [ "${JDKW_EXTENSION}" == "dmg" ]; then
@@ -141,34 +173,26 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
     volume=`echo "${result}" | grep -o -P "/Volumes/.*"`
     mount=`echo "${result}" | grep -o -P "/dev/[\S]*"`
     package=`ls "${volume}" | grep "JDK.*\.pkg" | head -n 1`
-    xar -xf "${volume}/${package}" .
-    hdiutil detach "${mount}"
+    safe_command "xar -xf \"${volume}/${package}\" . &> /dev/null"
+    safe_command "hdiutil detach \"${mount}\" &> /dev/null"
     jdk=`ls | grep "jdk.*\.pkg" | head -n 1`
-    cpio -i < ./${jdk}/Payload
+    safe_command "cpio -i < \"./${jdk}/Payload\" &> /dev/null"
     echo "export JAVA_HOME=\"${JDKW_TARGET}/${jdkid}/Contents/Home\"" > "${JDKW_TARGET}/${jdkid}/environment"
   else
-    echo "Unsupported extension ${JDKW_EXTENSION}"
+    log_err "Unsupported extension ${JDKW_EXTENSION}"
     exit 1
   fi
   echo "export PATH=\"\$JAVA_HOME/bin:\$PATH\"" >> "${JDKW_TARGET}/${jdkid}/environment"
-  if [ $? -ne 0 ]; then
-    echo "Extract failed of ${archive}"
-    rm -rf "${JDKW_TARGET}/${jdkid}"
-    exit 1
-  fi
 
   # Installation complete
-  popd &> /dev/null
+  safe_command "popd &> /dev/null"
 fi
 
 # Setup the environment
-echo "Environment:"
-cat ${JDKW_TARGET}/${jdkid}/environment
+log_out "Environment:\n$(cat "${JDKW_TARGET}/${jdkid}/environment")"
 source "${JDKW_TARGET}/${jdkid}/environment"
 
 # Execute the provided command
-echo "Executing:"
-echo "$@"
+log_out "Executing: $@"
 eval $@
 exit $?
-
