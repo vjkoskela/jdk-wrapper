@@ -138,6 +138,9 @@ fi
 jdkid="${JDKW_VERSION}_${JDKW_BUILD}_${JDKW_PLATFORM}"
 if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   log_out "Desired JDK version ${jdkid} not found"
+  if [ -d "${JDKW_TARGET}/${jdkid}" ]; then
+      safe_command "rm -rf \"${JDKW_TARGET}/${jdkid}\""
+  fi
 
   # Create target directory
   safe_command "mkdir -p \"${JDKW_TARGET}/${jdkid}\""
@@ -167,6 +170,7 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   if [ "${JDKW_EXTENSION}" == "tar.gz" ]; then
     safe_command "tar -xzf \"${archive}\""
     package=`ls | grep "jdk[^-].*" | head -n 1`
+    safe_command "rm -f \"${archive}\""
     echo "export JAVA_HOME=\"${JDKW_TARGET}/${jdkid}/${package}\"" > "${JDKW_TARGET}/${jdkid}/environment"
   elif [ "${JDKW_EXTENSION}" == "dmg" ]; then
     result=`hdiutil attach "${archive}" | grep -P "/Volumes/.*"`
@@ -177,6 +181,9 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
     safe_command "hdiutil detach \"${mount}\" &> /dev/null"
     jdk=`ls | grep "jdk.*\.pkg" | head -n 1`
     safe_command "cpio -i < \"./${jdk}/Payload\" &> /dev/null"
+    safe_command "rm -f \"${archive}\""
+    safe_command "rm -rf \"${jdk}\""
+    safe_command "rm -rf \"javaappletplugin.pkg\""
     echo "export JAVA_HOME=\"${JDKW_TARGET}/${jdkid}/Contents/Home\"" > "${JDKW_TARGET}/${jdkid}/environment"
   else
     log_err "Unsupported extension ${JDKW_EXTENSION}"
