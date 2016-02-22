@@ -33,10 +33,12 @@ Configuration is performed using environment variables:
 * JDKW_TARGET : Target directory (e.g. '/var/tmp'). Optional.
 * JDKW_PLATFORM : Platform specifier (e.g. 'linux-x64'). Optional.
 * JDKW_EXTENSION : Archive extension (e.g. 'tar.gz'). Optional.
+* JDKW_VERBOSE : Log wrapper actions to standard out. Optional.
 
 The default target directory is ~/.jdk.<br/>
 The default platform is detected using uname.<br/>
-By default the extension dmg is used for Darwin and tar.gz for other platforms.
+By default the extension dmg is used for Darwin and tar.gz for other platforms.<br/>
+By default the wrapper does not log.
 
 ### Version and Build
 
