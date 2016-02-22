@@ -3,10 +3,8 @@ cache:
   - $HOME/.jdk
 sudo: false
 env:
-  global:
-  - JDKW_VERSION=8u65
-  - JDKW_BUILD=b17
+  - JDKW_VERSION=8u74 JDKW_BUILD=b02
 install: true
 script:
 - ./jdk-wrapper.sh javac -version
-- if [ "$(./jdk-wrapper.sh javac -version 2>&1 | tail -n 1)" != "javac 1.8.0_65" ]; then exit 1; fi;
+- if [ "$(./jdk-wrapper.sh javac -version 2>&1 | tail -n 1)" != "javac 1.8.0_74" ]; then exit 1; fi;

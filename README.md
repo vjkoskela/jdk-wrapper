@@ -77,7 +77,13 @@ env:
   - JDKW_BUILD=b17
 ```
 
-To build against multiple versions of the Oracle JDK please refer to the [Travis documentation](https://docs.travis-ci.com/) for how to configure matrix builds.
+To create a matrix build against multiple versions of the Oracle JDK simply specify the environment variables like this:
+
+```yml
+env:
+  - JDKW_VERSION=7u79 JDKW_BUILD=b15
+  - JDKW_VERSION=8u74 JDKW_BUILD=b02
+```
 
 Finally, invoke your build command using the jdk-wrapper script. The following assumes you have downloaded and included jdk-wrapper.sh in your project.
 
