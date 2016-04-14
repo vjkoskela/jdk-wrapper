@@ -28,10 +28,34 @@
 # e.g.
 # > JDKW_VERSION=8u65 JDKW_BUILD=13 jdk-wrapper.sh <CMD>
 #
+# Alternatively, create a file called .jdkw in the working directory with the
+# configuration properties.
+#
+# e.g.
+# JDKW_VERSION=8u65
+# JDKW_BUILD=13
+#
+# Then wrap your command:
+#
+# e.g.
+# > jdk-wrapper.sh <CMD>
+#
+# The third option is to pass arguments to jdk-wrapper.sh which define the
+# configuration. Any argument that begins with "JDKW_" will be considered a
+# configuration parameter, everything from the first non-configuration parameter
+# onward is considered part of the command.
+#
+# e.g.
+# > jdk-wrapper.sh JDKW_VERSION=8u65 JDKW_BUILD=13 <CMD>
+#
+# Finally, any combination of these three forms of configuration is permissible.
+# Any environment variables override the values in the .jdkw file and any values
+# specified on the command line override both the environment and the file.
+#
 # The wrapper script will download, cache and set JAVA_HOME before executing
 # the specified command.
 #
-# Configuration via environment variables:
+# Configuration via environment variables or property file:
 #
 # JDKW_VERSION : Version identifier (e.g. 8u65). Required.
 # JDKW_BUILD : Build identifier (e.g. b17). Required.
@@ -71,7 +95,28 @@ function safe_command {
 CURL_OPTIONS=""
 WGET_OPTIONS=""
 
-# Configuration from environment
+# Load properties file
+if [ -f .jdkw ]; then
+  source .jdkw
+fi
+
+# Process command line arguments
+IN_COMMAND=
+COMMAND=
+for arg in "$@"; do
+  if [ ! -z ${IN_COMMAND} ]; then
+    COMMAND="${COMMAND} ${arg}"
+  else
+    if [[ ${arg} == JDKW_* ]] ; then
+      declare ${arg}
+    else
+      IN_COMMAND=1
+      COMMAND=${arg}
+    fi
+  fi
+done
+
+# Process configuration
 if [ -z "${JDKW_VERSION}" ]; then
   log_err "Required JDKW_VERSION (e.g. 8u65) environment variable not set"
   exit 1
@@ -200,6 +245,6 @@ log_out "Environment:\n$(cat "${JDKW_TARGET}/${jdkid}/environment")"
 source "${JDKW_TARGET}/${jdkid}/environment"
 
 # Execute the provided command
-log_out "Executing: $@"
-eval $@
+log_out "Executing: ${COMMAND}"
+eval ${COMMAND}
 exit $?

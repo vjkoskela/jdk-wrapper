@@ -17,16 +17,32 @@ Provides automatic download, unpacking and usage of specific Oracle JDK versions
 Usage
 -----
 
-Simply set your desired JDK version and wrap your command relying on the JDK
-with a call to the jdk-wrapper.sh script.
+Simply set your desired JDK version and wrap your command relying on the JDK with a call to the jdk-wrapper.sh script.
 
     > JDKW_VERSION=8u65 JDKW_BUILD=b17 jdk-wrapper.sh <CMD>
+
+Alternatively, create a .jdkw properties file in the working directory.
+
+```
+JDKW_VERSION=8u65
+JDKW_BUILD=b17
+```
+
+Then execute jdk-wrapper.sh script without setting the environment variables.
+
+    > jdk-wrapper.sh <CMD>
+
+The third option is to pass arguments to jdk-wrapper.sh which define the configuration. Any argument that begins with "JDKW_" will be considered a configuration parameter, everything from the first non-configuration parameter onward is considered part of the command.
+
+    > jdk-wrapper.sh JDKW_VERSION=8u65 JDKW_BUILD=13 <CMD>
+
+Finally, any combination of these three forms of configuration is permissible. Any environment variables override the values in the .jdkw file and any values specified on the command line override both the environment and the .jdkw file.
 
 The wrapper script will download and cache the specified JDK version and set JAVA_HOME appropriately before executing the specified command.
 
 ### Configuration
 
-Configuration is performed using environment variables:
+Regardless of how the configuration is specified it supports the following:
 
 * JDKW_VERSION : Version identifier (e.g. '8u65'). Required.
 * JDKW_BUILD : Build identifier (e.g. 'b17'). Required.
@@ -98,6 +114,15 @@ Alternatively, you may download the latest version and execute it as follows:
 script:
 - curl -s https://raw.githubusercontent.com/vjkoskela/jdk-wrapper/master/jdk-wrapper.sh | bash /dev/stdin mvn install
 ```
+
+If your repository contains a .jdkw properties file it is __not__ sufficient to set the environment variables to create a matrix build because the .jdkw properties file will override the environment variables. Instead you must set the environment variables and then pass them as arguments to jdk-wrapper.sh as follows: 
+ 
+```yml
+script:
+- ./jdk-wrapper.sh JDKW_VERSION=${JDKW_VERSION} JDKW_BUILD=${JDKW_BUILD} mvn install
+```
+
+This is most commonly the case when you have a JDK version that you develop against (typically the latest) specified in .jdkw but desire a build which validates against multiple (older) JDK versions.
 
 License
 -------
