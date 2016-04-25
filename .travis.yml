@@ -3,8 +3,9 @@ cache:
   - $HOME/.jdk
 sudo: false
 env:
+  # The version and build are overriden by the .jdkw property file
   - JDKW_VERSION=8u74 JDKW_BUILD=b02 JDKW_VERBOSE=1
 install: true
 script:
 - ./jdk-wrapper.sh javac -version
-- if [ "$(./jdk-wrapper.sh javac -version 2>&1 | tail -n 1)" != "javac 1.8.0_74" ]; then exit 1; fi;
+- if [ "$(./jdk-wrapper.sh javac -version 2>&1 | tail -n 1)" != "javac 1.8.0_77" ]; then exit 1; fi;
