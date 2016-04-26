@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Copyright 2016 Ville Koskela
 #
@@ -69,17 +69,17 @@
 # By default the extension dmg is used for Darwin and tar.gz for Linux/Solaris.
 # By default the wrapper does not log.
 
-function log_err() {
-  echo -e "$@" 1>&2;
+log_err() {
+  printf "$@\n" 1>&2;
 }
 
-function log_out() {
+log_out() {
   if [ -n "${JDKW_VERBOSE}" ]; then
-    echo -e "$@"
+    printf "$@\n"
   fi
 }
 
-function safe_command {
+safe_command() {
   local l_command=$1
   local l_prefix=`date  +'%H:%M:%S'`
   log_out "[${l_prefix}] ${l_command}";
@@ -97,21 +97,22 @@ WGET_OPTIONS=""
 
 # Load properties file
 if [ -f .jdkw ]; then
-  source .jdkw
+  . ./.jdkw
 fi
 
 # Process command line arguments
 IN_COMMAND=
 COMMAND=
-for arg in "$@"; do
+for ARG in "$@"; do
   if [ ! -z ${IN_COMMAND} ]; then
-    COMMAND="${COMMAND} ${arg}"
+    COMMAND="${COMMAND} ${ARG}"
   else
-    if [[ ${arg} == JDKW_* ]] ; then
-      declare ${arg}
+    JDKW_ARG=`echo "${ARG}" | grep 'JDKW_.*'`
+    if [ -n "${JDKW_ARG}" ]; then
+      declare ${ARG}
     else
       IN_COMMAND=1
-      COMMAND=${arg}
+      COMMAND=${ARG}
     fi
   fi
 done
@@ -136,18 +137,18 @@ if [ -z "${JDKW_PLATFORM}" ]; then
     log_err "Optional JDKW_PLATFORM (e.g. macosx-x64) environment variable not set and unable to determine a reasonable default"
     exit 1
   else
-    if [ "${os}" == "Darwin" ]; then
+    if [ "${os}" = "Darwin" ]; then
       JDKW_PLATFORM="macosx-x64"
-    elif [ "${os}" == "Linux" ]; then
-      if [ "${architecture}" == "x86_64" ]; then
+    elif [ "${os}" = "Linux" ]; then
+      if [ "${architecture}" = "x86_64" ]; then
         JDKW_PLATFORM="linux-x64"
       else
         JDKW_PLATFORM="linux-i586"
       fi
-    elif [ "${os}" == "SunOS" ]; then
-      if [ "${architecture}" == "sparc64" ]; then
+    elif [ "${os}" = "SunOS" ]; then
+      if [ "${architecture}" = "sparc64" ]; then
         JDKW_PLATFORM="solaris-sparcv9"
-      elif [ "${architecture}" == "sun4u" ]; then
+      elif [ "${architecture}" = "sun4u" ]; then
         JDKW_PLATFORM="solaris-sparcv9"
       else
         JDKW_PLATFORM="solaris-x64"
@@ -160,7 +161,7 @@ if [ -z "${JDKW_PLATFORM}" ]; then
   fi
 fi
 extension="tar.gz"
-if [ "${JDKW_PLATFORM}" == "macosx-x64" ]; then
+if [ "${JDKW_PLATFORM}" = "macosx-x64" ]; then
   extension="dmg"
 fi
 if [ -z "${JDKW_EXTENSION}" ]; then
@@ -212,12 +213,12 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
 
   # Extract based on extension
   log_out "Unpacking ${JDKW_EXTENSION}..."
-  if [ "${JDKW_EXTENSION}" == "tar.gz" ]; then
+  if [ "${JDKW_EXTENSION}" = "tar.gz" ]; then
     safe_command "tar -xzf \"${archive}\""
     package=`ls | grep "jdk[^-].*" | head -n 1`
     safe_command "rm -f \"${archive}\""
-    echo "export JAVA_HOME=\"${JDKW_TARGET}/${jdkid}/${package}\"" > "${JDKW_TARGET}/${jdkid}/environment"
-  elif [ "${JDKW_EXTENSION}" == "dmg" ]; then
+    printf "export JAVA_HOME=\"${JDKW_TARGET}/${jdkid}/${package}\"\n" > "${JDKW_TARGET}/${jdkid}/environment"
+  elif [ "${JDKW_EXTENSION}" = "dmg" ]; then
     result=`hdiutil attach "${archive}" | grep -P "/Volumes/.*"`
     volume=`echo "${result}" | grep -o -P "/Volumes/.*"`
     mount=`echo "${result}" | grep -o -P "/dev/[\S]*"`
@@ -229,12 +230,12 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
     safe_command "rm -f \"${archive}\""
     safe_command "rm -rf \"${jdk}\""
     safe_command "rm -rf \"javaappletplugin.pkg\""
-    echo "export JAVA_HOME=\"${JDKW_TARGET}/${jdkid}/Contents/Home\"" > "${JDKW_TARGET}/${jdkid}/environment"
+    printf "export JAVA_HOME=\"${JDKW_TARGET}/${jdkid}/Contents/Home\"\n" > "${JDKW_TARGET}/${jdkid}/environment"
   else
     log_err "Unsupported extension ${JDKW_EXTENSION}"
     exit 1
   fi
-  echo "export PATH=\"\$JAVA_HOME/bin:\$PATH\"" >> "${JDKW_TARGET}/${jdkid}/environment"
+  printf "export PATH=\"\$JAVA_HOME/bin:\$PATH\"\n" >> "${JDKW_TARGET}/${jdkid}/environment"
 
   # Installation complete
   safe_command "popd &> /dev/null"
@@ -242,7 +243,7 @@ fi
 
 # Setup the environment
 log_out "Environment:\n$(cat "${JDKW_TARGET}/${jdkid}/environment")"
-source "${JDKW_TARGET}/${jdkid}/environment"
+. "${JDKW_TARGET}/${jdkid}/environment"
 
 # Execute the provided command
 log_out "Executing: ${COMMAND}"
