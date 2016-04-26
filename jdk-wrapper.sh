@@ -197,9 +197,9 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
 
   # Download archive
   log_out "Downloading JDK from ${url}"
-  if hash wget 2> /dev/null; then
+  if type wget 2> /dev/null; then
     safe_command "wget ${WGET_OPTIONS} --no-check-certificate --no-cookies --header \"Cookie: oraclelicense=accept-securebackup-cookie\" -O \"${archive}\" \"${url}\""
-  elif hash curl 2> /dev/null; then
+  elif type curl 2> /dev/null; then
     safe_command "curl ${CURL_OPTIONS} -j -k -L -H \"Cookie: oraclelicense=accept-securebackup-cookie\" -o \"${archive}\" \"${url}\""
   else
     log_err "Could not find curl or wget; aborting..."
