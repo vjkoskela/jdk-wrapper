@@ -80,11 +80,11 @@ log_out() {
 }
 
 safe_command() {
-  local l_command=$1
-  local l_prefix=`date  +'%H:%M:%S'`
+  l_command=$1
+  l_prefix=`date  +'%H:%M:%S'`
   log_out "[${l_prefix}] ${l_command}";
   eval $1
-  local l_result=$?
+  l_result=$?
   if [ "${l_result}" -ne "0" ]; then
     log_err "ERROR: ${l_command} failed with ${l_result}"
     exit 1
@@ -189,8 +189,9 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   fi
 
   # Create target directory
+  LAST_DIR=`pwd`
   safe_command "mkdir -p \"${JDKW_TARGET}/${jdkid}\""
-  safe_command "pushd \"${JDKW_TARGET}/${jdkid}\" &> /dev/null"
+  safe_command "cd \"${JDKW_TARGET}/${jdkid}\""
   url="http://download.oracle.com/otn-pub/java/jdk/${JDKW_VERSION}-${JDKW_BUILD}/jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}"
   archive="jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}"
 
@@ -203,11 +204,13 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   else
     log_err "Could not find curl or wget; aborting..."
     safe_command "rm -rf \"${JDKW_TARGET}/${jdkid}\""
+    safe_command "cd ${LAST_DIR}"
     exit 1
   fi
   if [ $? -ne 0 ]; then
     log_err "Download failed of ${url}"
     safe_command "rm -rf \"${JDKW_TARGET}/${jdkid}\""
+    safe_command "cd ${LAST_DIR}"
     exit 1
   fi
 
@@ -233,12 +236,13 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
     printf "export JAVA_HOME=\"${JDKW_TARGET}/${jdkid}/Contents/Home\"\n" > "${JDKW_TARGET}/${jdkid}/environment"
   else
     log_err "Unsupported extension ${JDKW_EXTENSION}"
+    safe_command "cd ${LAST_DIR}"
     exit 1
   fi
   printf "export PATH=\"\$JAVA_HOME/bin:\$PATH\"\n" >> "${JDKW_TARGET}/${jdkid}/environment"
 
   # Installation complete
-  safe_command "popd &> /dev/null"
+  safe_command "cd ${LAST_DIR}"
 fi
 
 # Setup the environment
