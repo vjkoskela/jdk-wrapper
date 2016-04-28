@@ -70,20 +70,20 @@
 # By default the wrapper does not log.
 
 log_err() {
-  printf "$@\n" 1>&2;
+  printf "%s\n" "$@" 1>&2;
 }
 
 log_out() {
   if [ -n "${JDKW_VERBOSE}" ]; then
-    printf "$@\n"
+    printf "%s\n" "$@"
   fi
 }
 
 safe_command() {
   l_command=$1
-  l_prefix=`date  +'%H:%M:%S'`
+  l_prefix=$(date  +'%H:%M:%S')
   log_out "[${l_prefix}] ${l_command}";
-  eval $1
+  eval "$1"
   l_result=$?
   if [ "${l_result}" -ne "0" ]; then
     log_err "ERROR: ${l_command} failed with ${l_result}"
@@ -107,9 +107,9 @@ for ARG in "$@"; do
   if [ ! -z ${IN_COMMAND} ]; then
     COMMAND="${COMMAND} ${ARG}"
   else
-    JDKW_ARG=`echo "${ARG}" | grep 'JDKW_.*'`
+    JDKW_ARG=$(echo "${ARG}" | grep 'JDKW_.*')
     if [ -n "${JDKW_ARG}" ]; then
-      declare ${ARG}
+      eval "${ARG}"
     else
       IN_COMMAND=1
       COMMAND=${ARG}
@@ -131,8 +131,8 @@ if [ -z "${JDKW_TARGET}" ]; then
   log_out "Defaulted to target ${JDKW_TARGET}"
 fi
 if [ -z "${JDKW_PLATFORM}" ]; then
-  os=`uname`
-  architecture=`uname -m`
+  os=$(uname)
+  architecture=$(uname -m)
   if [ $? -ne 0 ]; then
     log_err "Optional JDKW_PLATFORM (e.g. macosx-x64) environment variable not set and unable to determine a reasonable default"
     exit 1
@@ -175,7 +175,7 @@ if [ -z "${JDKW_VERBOSE}" ]; then
 fi
 
 # Ensure target directory exists
-if [ ! -d ${JDKW_TARGET} ]; then
+if [ ! -d "${JDKW_TARGET}" ]; then
   log_out "Creating target directory ${JDKW_TARGET}"
   safe_command "mkdir -p \"${JDKW_TARGET}\""
 fi
@@ -189,7 +189,7 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   fi
 
   # Create target directory
-  LAST_DIR=`pwd`
+  LAST_DIR=$(pwd)
   safe_command "mkdir -p \"${JDKW_TARGET}/${jdkid}\""
   safe_command "cd \"${JDKW_TARGET}/${jdkid}\""
   url="http://download.oracle.com/otn-pub/java/jdk/${JDKW_VERSION}-${JDKW_BUILD}/jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}"
@@ -197,9 +197,9 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
 
   # Download archive
   log_out "Downloading JDK from ${url}"
-  if type curl 2> /dev/null; then
+  if command -v curl > /dev/null 2>&1; then
     safe_command "curl ${CURL_OPTIONS} -j -k -L -H \"Cookie: oraclelicense=accept-securebackup-cookie\" -o \"${archive}\" \"${url}\""
-  elif type wget 2> /dev/null; then
+  elif command -v wget > /dev/null 2>&1; then
     safe_command "wget ${WGET_OPTIONS} --no-check-certificate --no-cookies --header \"Cookie: oraclelicense=accept-securebackup-cookie\" -O \"${archive}\" \"${url}\""
   else
     log_err "Could not find curl or wget; aborting..."
@@ -218,22 +218,22 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   log_out "Unpacking ${JDKW_EXTENSION}..."
   if [ "${JDKW_EXTENSION}" = "tar.gz" ]; then
     safe_command "tar -xzf \"${archive}\""
-    package=`ls | grep "jdk[^-].*" | head -n 1`
+    package=$(find . -regex '.*/jdk[^-].*' -maxdepth 1 | head -n 1)
     safe_command "rm -f \"${archive}\""
-    printf "export JAVA_HOME=\"${JDKW_TARGET}/${jdkid}/${package}\"\n" > "${JDKW_TARGET}/${jdkid}/environment"
+    printf "export JAVA_HOME=\"%s/%s/%s\"\n" "${JDKW_TARGET}" "${jdkid}" "${package}" > "${JDKW_TARGET}/${jdkid}/environment"
   elif [ "${JDKW_EXTENSION}" = "dmg" ]; then
-    result=`hdiutil attach "${archive}" | grep -P "/Volumes/.*"`
-    volume=`echo "${result}" | grep -o -P "/Volumes/.*"`
-    mount=`echo "${result}" | grep -o -P "/dev/[\S]*"`
-    package=`ls "${volume}" | grep "JDK.*\.pkg" | head -n 1`
+    result=$(hdiutil attach "${archive}" | grep -P "/Volumes/.*")
+    volume=$(echo "${result}" | grep -o -P "/Volumes/.*")
+    mount=$(echo "${result}" | grep -o -P "/dev/[\S]*")
+    package=$(find "${volume}" -regex '/JDK.*\.pkg' -maxdepth 1 | head -n 1)
     safe_command "xar -xf \"${volume}/${package}\" . &> /dev/null"
     safe_command "hdiutil detach \"${mount}\" &> /dev/null"
-    jdk=`ls | grep "jdk.*\.pkg" | head -n 1`
-    safe_command "cpio -i < \"./${jdk}/Payload\" &> /dev/null"
+    jdk=$(find . -regex '.*/jdk.*\.pkg' -maxdepth 1 | head -n 1)
+    safe_command "cpio -i < \"${jdk}/Payload\" &> /dev/null"
     safe_command "rm -f \"${archive}\""
     safe_command "rm -rf \"${jdk}\""
     safe_command "rm -rf \"javaappletplugin.pkg\""
-    printf "export JAVA_HOME=\"${JDKW_TARGET}/${jdkid}/Contents/Home\"\n" > "${JDKW_TARGET}/${jdkid}/environment"
+    printf "export JAVA_HOME=\"%s/%s/Contents/Home\"\n" "${JDKW_TARGET}" "${jdkid}" > "${JDKW_TARGET}/${jdkid}/environment"
   else
     log_err "Unsupported extension ${JDKW_EXTENSION}"
     safe_command "cd ${LAST_DIR}"
@@ -251,5 +251,5 @@ log_out "Environment:\n$(cat "${JDKW_TARGET}/${jdkid}/environment")"
 
 # Execute the provided command
 log_out "Executing: ${COMMAND}"
-eval ${COMMAND}
+eval "${COMMAND}"
 exit $?
