@@ -222,9 +222,9 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
     safe_command "rm -f \"${archive}\""
     printf "export JAVA_HOME=\"${JDKW_TARGET}/${jdkid}/${package}\"\n" > "${JDKW_TARGET}/${jdkid}/environment"
   elif [ "${JDKW_EXTENSION}" = "dmg" ]; then
-    result=`hdiutil attach "${archive}" | grep -P "/Volumes/.*"`
-    volume=`echo "${result}" | grep -o -P "/Volumes/.*"`
-    mount=`echo "${result}" | grep -o -P "/dev/[\S]*"`
+    result=`hdiutil attach "${archive}" | grep "/Volumes/.*"`
+    volume=`echo "${result}" | grep -o "/Volumes/.*"`
+    mount=`echo "${result}" | grep -o "/dev/[^ ]*" | tail -n 1`
     package=`ls "${volume}" | grep "JDK.*\.pkg" | head -n 1`
     safe_command "xar -xf \"${volume}/${package}\" . &> /dev/null"
     safe_command "hdiutil detach \"${mount}\" &> /dev/null"
