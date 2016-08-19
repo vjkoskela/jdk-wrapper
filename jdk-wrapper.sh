@@ -105,14 +105,14 @@ IN_COMMAND=
 COMMAND=
 for ARG in "$@"; do
   if [ ! -z ${IN_COMMAND} ]; then
-    COMMAND="${COMMAND} ${ARG}"
+    COMMAND="${COMMAND} \"${ARG}\""
   else
     JDKW_ARG=`echo "${ARG}" | grep 'JDKW_.*'`
     if [ -n "${JDKW_ARG}" ]; then
       declare ${ARG}
     else
       IN_COMMAND=1
-      COMMAND=${ARG}
+      COMMAND="\"${ARG}\""
     fi
   fi
 done
