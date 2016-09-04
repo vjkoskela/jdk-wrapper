@@ -46,6 +46,7 @@ Regardless of how the configuration is specified it supports the following:
 
 * JDKW_VERSION : Version identifier (e.g. '8u65'). Required.
 * JDKW_BUILD : Build identifier (e.g. 'b17'). Required.
+* JDKW_JCE : Include Java Cryptographic Extensions (e.g. false). Optional.
 * JDKW_TARGET : Target directory (e.g. '/var/tmp'). Optional.
 * JDKW_PLATFORM : Platform specifier (e.g. 'linux-x64'). Optional.
 * JDKW_EXTENSION : Archive extension (e.g. 'tar.gz'). Optional.
@@ -53,6 +54,7 @@ Regardless of how the configuration is specified it supports the following:
 
 The default target directory is ~/.jdk.<br/>
 The default platform is detected using uname.<br/>
+By default the Java Cryptographic Extensions are included.
 By default the extension dmg is used for Darwin and tar.gz for other platforms.<br/>
 By default the wrapper does not log.
 

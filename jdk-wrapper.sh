@@ -59,30 +59,33 @@
 #
 # JDKW_VERSION : Version identifier (e.g. 8u65). Required.
 # JDKW_BUILD : Build identifier (e.g. b17). Required.
+# JDKW_JCE : Include Java Cryptographic Extensions (e.g. false). Optional.
 # JDKW_TARGET : Target directory (e.g. /var/tmp). Optional.
 # JDKW_PLATFORM : Platform specifier (e.g. 'linux-x64'). Optional.
 # JDKW_EXTENSION : Archive extension (e.g. 'tar.gz'). Optional.
 # JDKW_VERBOSE : Log wrapper actions to standard out. Optional.
 #
+# By default the Java Cryptographic Extensions are included.
 # By default the target directory is ~/.jdk.
 # By default the platform is detected using uname.
 # By default the extension dmg is used for Darwin and tar.gz for Linux/Solaris.
 # By default the wrapper does not log.
 
 log_err() {
-  printf "$@\n" 1>&2;
+  l_prefix=$(date  +'%H:%M:%S')
+  printf "[%s] %s\n" "${l_prefix}" "$@" 1>&2;
 }
 
 log_out() {
   if [ -n "${JDKW_VERBOSE}" ]; then
-    printf "$@\n"
+    l_prefix=$(date  +'%H:%M:%S')
+    printf "[%s] %s\n" "${l_prefix}" "$@"
   fi
 }
 
 safe_command() {
   l_command=$1
-  l_prefix=`date  +'%H:%M:%S'`
-  log_out "[${l_prefix}] ${l_command}";
+  log_out "${l_command}";
   eval $1
   l_result=$?
   if [ "${l_result}" -ne "0" ]; then
@@ -107,9 +110,9 @@ for ARG in "$@"; do
   if [ ! -z ${IN_COMMAND} ]; then
     COMMAND="${COMMAND} \"${ARG}\""
   else
-    JDKW_ARG=`echo "${ARG}" | grep 'JDKW_.*'`
+    JDKW_ARG=$(echo "${ARG}" | grep 'JDKW_.*')
     if [ -n "${JDKW_ARG}" ]; then
-      declare ${ARG}
+      eval ${ARG}
     else
       IN_COMMAND=1
       COMMAND="\"${ARG}\""
@@ -126,13 +129,17 @@ if [ -z "${JDKW_BUILD}" ]; then
   log_err "Required JDKW_BUILD (e.g. b17) environment variable not set"
   exit 1
 fi
+if [ -z "${JDKW_JCE}" ]; then
+  JDKW_JCE="true"
+  log_out "Defaulted to jce ${JDKW_JCE}"
+fi
 if [ -z "${JDKW_TARGET}" ]; then
   JDKW_TARGET="${HOME}/.jdk"
   log_out "Defaulted to target ${JDKW_TARGET}"
 fi
 if [ -z "${JDKW_PLATFORM}" ]; then
-  os=`uname`
-  architecture=`uname -m`
+  os=$(uname)
+  architecture=$(uname -m)
   if [ $? -ne 0 ]; then
     log_err "Optional JDKW_PLATFORM (e.g. macosx-x64) environment variable not set and unable to determine a reasonable default"
     exit 1
@@ -173,6 +180,7 @@ if [ -z "${JDKW_VERBOSE}" ]; then
   CURL_OPTIONS="${CURL_OPTIONS} --silent"
   WGET_OPTIONS="${WGET_OPTIONS} --quiet"
 fi
+JAVA_MAJOR_VERSION=$(echo "${JDKW_VERSION}" | sed 's/\([0-9]*\)u[0-9]*/\1/')
 
 # Ensure target directory exists
 if [ ! -d ${JDKW_TARGET} ]; then
@@ -180,8 +188,13 @@ if [ ! -d ${JDKW_TARGET} ]; then
   safe_command "mkdir -p \"${JDKW_TARGET}\""
 fi
 
-# Download and install desired jdk version
+# Build jdk identifier
 jdkid="${JDKW_VERSION}_${JDKW_BUILD}_${JDKW_PLATFORM}"
+if [ "${JDKW_JCE}" = "true" ]; then
+  jdkid="${jdkid}_jce"
+fi
+
+# Download and install desired jdk version
 if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   log_out "Desired JDK version ${jdkid} not found"
   if [ -d "${JDKW_TARGET}/${jdkid}" ]; then
@@ -189,18 +202,20 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   fi
 
   # Create target directory
-  LAST_DIR=`pwd`
+  LAST_DIR=$(pwd)
   safe_command "mkdir -p \"${JDKW_TARGET}/${jdkid}\""
   safe_command "cd \"${JDKW_TARGET}/${jdkid}\""
-  url="http://download.oracle.com/otn-pub/java/jdk/${JDKW_VERSION}-${JDKW_BUILD}/jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}"
-  archive="jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}"
+
+  # JDK
+  jdk_url="http://download.oracle.com/otn-pub/java/jdk/${JDKW_VERSION}-${JDKW_BUILD}/jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}"
+  jdk_archive="jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}"
 
   # Download archive
-  log_out "Downloading JDK from ${url}"
-  if type curl 2> /dev/null; then
-    safe_command "curl ${CURL_OPTIONS} -j -k -L -H \"Cookie: oraclelicense=accept-securebackup-cookie\" -o \"${archive}\" \"${url}\""
-  elif type wget 2> /dev/null; then
-    safe_command "wget ${WGET_OPTIONS} --no-check-certificate --no-cookies --header \"Cookie: oraclelicense=accept-securebackup-cookie\" -O \"${archive}\" \"${url}\""
+  log_out "Downloading JDK from ${jdk_url}"
+  if command -v curl 2> /dev/null; then
+    safe_command "curl ${CURL_OPTIONS} -j -k -L -H \"Cookie: oraclelicense=accept-securebackup-cookie\" -o \"${jdk_archive}\" \"${jdk_url}\""
+  elif command -v  wget 2> /dev/null; then
+    safe_command "wget ${WGET_OPTIONS} --no-check-certificate --no-cookies --header \"Cookie: oraclelicense=accept-securebackup-cookie\" -O \"${jdk_archive}\" \"${jdk_url}\""
   else
     log_err "Could not find curl or wget; aborting..."
     safe_command "rm -rf \"${JDKW_TARGET}/${jdkid}\""
@@ -208,7 +223,7 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
     exit 1
   fi
   if [ $? -ne 0 ]; then
-    log_err "Download failed of ${url}"
+    log_err "Download failed of ${jdk_url}"
     safe_command "rm -rf \"${JDKW_TARGET}/${jdkid}\""
     safe_command "cd ${LAST_DIR}"
     exit 1
@@ -217,29 +232,62 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   # Extract based on extension
   log_out "Unpacking ${JDKW_EXTENSION}..."
   if [ "${JDKW_EXTENSION}" = "tar.gz" ]; then
-    safe_command "tar -xzf \"${archive}\""
-    package=`ls | grep "jdk[^-].*" | head -n 1`
-    safe_command "rm -f \"${archive}\""
-    printf "export JAVA_HOME=\"${JDKW_TARGET}/${jdkid}/${package}\"\n" > "${JDKW_TARGET}/${jdkid}/environment"
+    safe_command "tar -xzf \"${jdk_archive}\""
+    package=$(ls | grep "jdk[^-].*" | head -n 1)
+    safe_command "rm -f \"${jdk_archive}\""
+    JAVA_HOME="${JDKW_TARGET}/${jdkid}/${package}"
   elif [ "${JDKW_EXTENSION}" = "dmg" ]; then
-    result=`hdiutil attach "${archive}" | grep "/Volumes/.*"`
-    volume=`echo "${result}" | grep -o "/Volumes/.*"`
-    mount=`echo "${result}" | grep -o "/dev/[^ ]*" | tail -n 1`
-    package=`ls "${volume}" | grep "JDK.*\.pkg" | head -n 1`
+    result=$(hdiutil attach "${jdk_archive}" | grep "/Volumes/.*")
+    volume=$(echo "${result}" | grep -o "/Volumes/.*")
+    mount=$(echo "${result}" | grep -o "/dev/[^ ]*" | tail -n 1)
+    package=$(ls "${volume}" | grep "JDK.*\.pkg" | head -n 1)
     safe_command "xar -xf \"${volume}/${package}\" . &> /dev/null"
     safe_command "hdiutil detach \"${mount}\" &> /dev/null"
-    jdk=`ls | grep "jdk.*\.pkg" | head -n 1`
+    jdk=$(ls | grep "jdk.*\.pkg" | head -n 1)
     safe_command "cpio -i < \"./${jdk}/Payload\" &> /dev/null"
-    safe_command "rm -f \"${archive}\""
+    safe_command "rm -f \"${jdk_archive}\""
     safe_command "rm -rf \"${jdk}\""
     safe_command "rm -rf \"javaappletplugin.pkg\""
-    printf "export JAVA_HOME=\"${JDKW_TARGET}/${jdkid}/Contents/Home\"\n" > "${JDKW_TARGET}/${jdkid}/environment"
+    JAVA_HOME="${JDKW_TARGET}/${jdkid}/Contents/Home"
   else
     log_err "Unsupported extension ${JDKW_EXTENSION}"
     safe_command "cd ${LAST_DIR}"
     exit 1
   fi
+  printf "export JAVA_HOME=\"%s\"\n" "${JAVA_HOME}" > "${JDKW_TARGET}/${jdkid}/environment"
   printf "export PATH=\"\$JAVA_HOME/bin:\$PATH\"\n" >> "${JDKW_TARGET}/${jdkid}/environment"
+
+  # Download and install matching JCE version
+  if [ "${JDKW_JCE}" = "true" ]; then
+    # JCE
+    jce_url="http://download.oracle.com/otn-pub/java/jce/${JAVA_MAJOR_VERSION}/jce_policy-${JAVA_MAJOR_VERSION}.zip"
+    jce_archive="jce_policy-${JAVA_MAJOR_VERSION}.zip"
+
+    # Download archive
+    log_out "Downloading JCE from ${jce_url}"
+    if command -v curl 2> /dev/null; then
+      safe_command "curl ${CURL_OPTIONS} -j -k -L -H \"Cookie: gpw_e24=xxx; oraclelicense=accept-securebackup-cookie;\" -o \"${jce_archive}\" \"${jce_url}\""
+    elif command -v wget 2> /dev/null; then
+      safe_command "wget ${WGET_OPTIONS} --no-check-certificate --no-cookies --header \"Cookie: gpw_e24=xxx; oraclelicense=accept-securebackup-cookie;\" -O \"${jce_archive}\" \"${jce_url}\""
+    else
+      log_err "Could not find curl or wget; aborting..."
+      safe_command "rm -rf \"${JDKW_TARGET}/${jdkid}\""
+      safe_command "cd ${LAST_DIR}"
+      exit 1
+    fi
+    if [ $? -ne 0 ]; then
+      log_err "Download failed of ${jce_url}"
+      safe_command "rm -rf \"${JDKW_TARGET}/${jdkid}\""
+      safe_command "cd ${LAST_DIR}"
+      exit 1
+    fi
+
+    # Extract contents
+    safe_command "unzip \"${jce_archive}\""
+    safe_command "find \"./UnlimitedJCEPolicyJDK${JAVA_MAJOR_VERSION}\" -type f -exec cp {} \"${JAVA_HOME}/jre/lib/security\" \\;"
+    safe_command "rm -rf \"./UnlimitedJCEPolicyJDK${JAVA_MAJOR_VERSION}\""
+    safe_command "rm \"${jce_archive}\""
+  fi
 
   # Installation complete
   safe_command "cd ${LAST_DIR}"
