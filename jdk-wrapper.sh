@@ -94,6 +94,11 @@ safe_command() {
   fi
 }
 
+generate_md5() {
+  l_path=$1
+  echo `find "${l_path}" -type f \( -iname "*" ! -iname "manifest.md5" ! -iname "manifest.check.md5" \) -print0 |  xargs -0 ls -l | awk '{print $5, $9}' | sort | md5`
+}
+
 # Default curl/wget options
 CURL_OPTIONS=""
 WGET_OPTIONS=""
@@ -194,6 +199,29 @@ if [ "${JDKW_JCE}" = "true" ]; then
   jdkid="${jdkid}_jce"
 fi
 
+# Check the JDK contents have not changed
+manifest="${JDKW_TARGET}/${jdkid}/manifest.md5"
+if [ -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
+  if [ -f "${manifest}" ]; then
+    log_out "Verifying manifest integrity..."
+    manifest_check="${JDKW_TARGET}/${jdkid}/manifest.check.md5"
+    safe_command "rm -f \"${manifest_check}\""
+    generate_md5 "${JDKW_TARGET}/${jdkid}" > "${manifest_check}"
+    manifest_md5=`cat "${manifest}"`
+    manifest_check_md5=`cat "${manifest_check}"`
+    if [ "${manifest_md5}" != "${manifest_check_md5}" ]; then
+      log_out "Manifest checksum changed; preparing to reinstall"
+      safe_command "rm -f \"${JDKW_TARGET}/${jdkid}/environment\""
+    else
+      log_out "Manifest integrity verified."
+    fi
+    safe_command "rm -f \"${manifest_check}\""
+  else
+    log_out "Manifest checksum not found; preparing to reinstall"
+    safe_command "rm -f \"${JDKW_TARGET}/${jdkid}/environment\""
+  fi
+fi
+
 # Download and install desired jdk version
 if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   log_out "Desired JDK version ${jdkid} not found"
@@ -290,6 +318,7 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   fi
 
   # Installation complete
+  generate_md5 "${JDKW_TARGET}/${jdkid}" > "${manifest}"
   safe_command "cd ${LAST_DIR}"
 fi
 
