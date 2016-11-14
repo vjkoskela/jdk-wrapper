@@ -94,9 +94,15 @@ safe_command() {
   fi
 }
 
-generate_md5() {
+generate_manifest_checksum() {
   l_path=$1
-  echo `find "${l_path}" -type f \( -iname "*" ! -iname "manifest.md5" ! -iname "manifest.check.md5" \) -print0 |  xargs -0 ls -l | awk '{print $5, $9}' | sort | md5`
+  checksum_exec="exit 1"
+  if command -v md5 2> /dev/null; then
+    checksum_exec="md5"
+  elif command -v sha1sum 2> /dev/null; then
+    checksum_exec="sha1sum"
+  fi
+  echo `find "${l_path}" -type f \( -iname "*" ! -iname "manifest.checksum" ! -iname "manifest.current.checksum" \) -print0 |  xargs -0 ls -l | awk '{print $5, $9}' | sort | ${checksum_exec}`
 }
 
 # Default curl/wget options
@@ -200,22 +206,22 @@ if [ "${JDKW_JCE}" = "true" ]; then
 fi
 
 # Check the JDK contents have not changed
-manifest="${JDKW_TARGET}/${jdkid}/manifest.md5"
+manifest="${JDKW_TARGET}/${jdkid}/manifest.checksum"
 if [ -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   if [ -f "${manifest}" ]; then
     log_out "Verifying manifest integrity..."
-    manifest_check="${JDKW_TARGET}/${jdkid}/manifest.check.md5"
+    manifest_current="${JDKW_TARGET}/${jdkid}/manifest.current.checksum"
     safe_command "rm -f \"${manifest_check}\""
-    generate_md5 "${JDKW_TARGET}/${jdkid}" > "${manifest_check}"
-    manifest_md5=`cat "${manifest}"`
-    manifest_check_md5=`cat "${manifest_check}"`
-    if [ "${manifest_md5}" != "${manifest_check_md5}" ]; then
+    generate_manifest_checksum "${JDKW_TARGET}/${jdkid}" > "${manifest_current}"
+    manifest_checksum=`cat "${manifest}"`
+    manifest_current_checksum=`cat "${manifest_current}"`
+    if [ "${manifest_checksum}" != "${manifest_current_checksum}" ]; then
       log_out "Manifest checksum changed; preparing to reinstall"
       safe_command "rm -f \"${JDKW_TARGET}/${jdkid}/environment\""
     else
       log_out "Manifest integrity verified."
     fi
-    safe_command "rm -f \"${manifest_check}\""
+    safe_command "rm -f \"${manifest_current}\""
   else
     log_out "Manifest checksum not found; preparing to reinstall"
     safe_command "rm -f \"${JDKW_TARGET}/${jdkid}/environment\""
@@ -318,7 +324,7 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   fi
 
   # Installation complete
-  generate_md5 "${JDKW_TARGET}/${jdkid}" > "${manifest}"
+  generate_manifest_checksum "${JDKW_TARGET}/${jdkid}" > "${manifest}"
   safe_command "cd ${LAST_DIR}"
 fi
 
