@@ -232,7 +232,16 @@ fi
 if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   log_out "Desired JDK version ${jdkid} not found"
   if [ -d "${JDKW_TARGET}/${jdkid}" ]; then
-      safe_command "rm -rf \"${JDKW_TARGET}/${jdkid}\""
+    # HACK: There is a race condition in or between Vagrant and Docker where
+    # the filesystem is cached and loaded on demand. When directories are
+    # recursively deleted the contents are not always immediately available.
+    # The result is that recursion does not occur but the parent deletion
+    # fails because the directory is eventually discovered to be non-empty.
+    # Testing shows that forcing an enumeration of the contents forces the
+    # nested directory structure to be cached. This is an attempt to provide
+    # a general solution to this problem.
+    safe_command "find \"${JDKW_TARGET}/${jdkid}\" > /var/tmp/.tree_flush"
+    safe_command "rm -rf \"${JDKW_TARGET}/${jdkid}\""
   fi
 
   # Create target directory
