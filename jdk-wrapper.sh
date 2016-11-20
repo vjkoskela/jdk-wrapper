@@ -83,6 +83,10 @@ log_out() {
   fi
 }
 
+rand() {
+  awk 'BEGIN {srand();printf "%d\n", (rand() * 10^8);}'
+}
+
 safe_command() {
   l_command=$1
   log_out "${l_command}";
@@ -97,12 +101,12 @@ safe_command() {
 generate_manifest_checksum() {
   l_path=$1
   checksum_exec="exit 1"
-  if command -v md5 2> /dev/null; then
+  if command -v md5 &> /dev/null; then
     checksum_exec="md5"
-  elif command -v sha1sum 2> /dev/null; then
+  elif command -v sha1sum &> /dev/null; then
     checksum_exec="sha1sum"
   fi
-  echo `find "${l_path}" -type f \( -iname "*" ! -iname "manifest.checksum" ! -iname "manifest.current.checksum" \) -print0 |  xargs -0 ls -l | awk '{print $5, $9}' | sort | ${checksum_exec}`
+  echo `find "${l_path}" -type f \( -iname "*" ! -iname "manifest.checksum" \) -print0 |  xargs -0 ls -l | awk '{print $5, $9}' | sort | ${checksum_exec}`
 }
 
 # Default curl/wget options
@@ -210,18 +214,17 @@ manifest="${JDKW_TARGET}/${jdkid}/manifest.checksum"
 if [ -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   if [ -f "${manifest}" ]; then
     log_out "Verifying manifest integrity..."
-    manifest_current="${JDKW_TARGET}/${jdkid}/manifest.current.checksum"
-    safe_command "rm -f \"${manifest_current}\""
+    manifest_current="${TMPDIR:-/tmp}/${l_target}-$$.$(rand)"
     generate_manifest_checksum "${JDKW_TARGET}/${jdkid}" > "${manifest_current}"
     manifest_checksum=`cat "${manifest}"`
     manifest_current_checksum=`cat "${manifest_current}"`
+    safe_command "rm -f \"${manifest_current}\""
     if [ "${manifest_checksum}" != "${manifest_current_checksum}" ]; then
       log_out "Manifest checksum changed; preparing to reinstall"
       safe_command "rm -f \"${JDKW_TARGET}/${jdkid}/environment\""
     else
       log_out "Manifest integrity verified."
     fi
-    safe_command "rm -f \"${manifest_current}\""
   else
     log_out "Manifest checksum not found; preparing to reinstall"
     safe_command "rm -f \"${JDKW_TARGET}/${jdkid}/environment\""
@@ -246,9 +249,9 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
 
   # Download archive
   log_out "Downloading JDK from ${jdk_url}"
-  if command -v curl 2> /dev/null; then
+  if command -v curl &> /dev/null; then
     safe_command "curl ${CURL_OPTIONS} -j -k -L -H \"Cookie: oraclelicense=accept-securebackup-cookie\" -o \"${jdk_archive}\" \"${jdk_url}\""
-  elif command -v  wget 2> /dev/null; then
+  elif command -v wget &> /dev/null; then
     safe_command "wget ${WGET_OPTIONS} --no-check-certificate --no-cookies --header \"Cookie: oraclelicense=accept-securebackup-cookie\" -O \"${jdk_archive}\" \"${jdk_url}\""
   else
     log_err "Could not find curl or wget; aborting..."
@@ -299,9 +302,9 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
 
     # Download archive
     log_out "Downloading JCE from ${jce_url}"
-    if command -v curl 2> /dev/null; then
+    if command -v curl &> /dev/null; then
       safe_command "curl ${CURL_OPTIONS} -j -k -L -H \"Cookie: gpw_e24=xxx; oraclelicense=accept-securebackup-cookie;\" -o \"${jce_archive}\" \"${jce_url}\""
-    elif command -v wget 2> /dev/null; then
+    elif command -v wget &> /dev/null; then
       safe_command "wget ${WGET_OPTIONS} --no-check-certificate --no-cookies --header \"Cookie: gpw_e24=xxx; oraclelicense=accept-securebackup-cookie;\" -O \"${jce_archive}\" \"${jce_url}\""
     else
       log_err "Could not find curl or wget; aborting..."
@@ -317,7 +320,7 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
     fi
 
     # Extract contents
-    safe_command "unzip \"${jce_archive}\""
+    safe_command "unzip \"${jce_archive}\" &> /dev/null"
     safe_command "find \"./UnlimitedJCEPolicyJDK${JAVA_MAJOR_VERSION}\" -type f -exec cp {} \"${JAVA_HOME}/jre/lib/security\" \\;"
     safe_command "rm -rf \"./UnlimitedJCEPolicyJDK${JAVA_MAJOR_VERSION}\""
     safe_command "rm \"${jce_archive}\""
