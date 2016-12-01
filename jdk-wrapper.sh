@@ -320,8 +320,7 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
     fi
 
     # Extract contents
-    safe_command "unzip \"${jce_archive}\" &> /dev/null"
-    find .
+    safe_command "unzip -qq \"${jce_archive}\""
     safe_command "find \"./UnlimitedJCEPolicyJDK${JAVA_MAJOR_VERSION}\" -type f -exec cp {} \"${JAVA_HOME}/jre/lib/security\" \\;"
     safe_command "rm -rf \"./UnlimitedJCEPolicyJDK${JAVA_MAJOR_VERSION}\""
     safe_command "rm \"${jce_archive}\""
