@@ -218,6 +218,8 @@ if [ -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
     generate_manifest_checksum "${JDKW_TARGET}/${jdkid}" > "${manifest_current}"
     manifest_checksum=`cat "${manifest}"`
     manifest_current_checksum=`cat "${manifest_current}"`
+    log_out "Previous: ${manifest_checksum}"
+    log_out "Current: ${manifest_current_checksum}"
     safe_command "rm -f \"${manifest_current}\""
     if [ "${manifest_checksum}" != "${manifest_current_checksum}" ]; then
       log_out "Manifest checksum changed; preparing to reinstall"
