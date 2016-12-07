@@ -101,9 +101,9 @@ safe_command() {
 generate_manifest_checksum() {
   l_path=$1
   checksum_exec="exit 1"
-  if command -v md5 &> /dev/null; then
+  if command -v md5 > /dev/null; then
     checksum_exec="md5"
-  elif command -v sha1sum &> /dev/null; then
+  elif command -v sha1sum > /dev/null; then
     checksum_exec="sha1sum"
   fi
   echo `find "${l_path}" -type f \( -iname "*" ! -iname "manifest.checksum" \) -print0 |  xargs -0 ls -l | awk '{print $5, $9}' | sort | ${checksum_exec}`
@@ -251,9 +251,9 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
 
   # Download archive
   log_out "Downloading JDK from ${jdk_url}"
-  if command -v curl &> /dev/null; then
+  if command -v curl > /dev/null; then
     safe_command "curl ${CURL_OPTIONS} -j -k -L -H \"Cookie: oraclelicense=accept-securebackup-cookie\" -o \"${jdk_archive}\" \"${jdk_url}\""
-  elif command -v wget &> /dev/null; then
+  elif command -v wget > /dev/null; then
     safe_command "wget ${WGET_OPTIONS} --no-check-certificate --no-cookies --header \"Cookie: oraclelicense=accept-securebackup-cookie\" -O \"${jdk_archive}\" \"${jdk_url}\""
   else
     log_err "Could not find curl or wget; aborting..."
@@ -304,9 +304,9 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
 
     # Download archive
     log_out "Downloading JCE from ${jce_url}"
-    if command -v curl &> /dev/null; then
+    if command -v curl > /dev/null; then
       safe_command "curl ${CURL_OPTIONS} -j -k -L -H \"Cookie: gpw_e24=xxx; oraclelicense=accept-securebackup-cookie;\" -o \"${jce_archive}\" \"${jce_url}\""
-    elif command -v wget &> /dev/null; then
+    elif command -v wget > /dev/null; then
       safe_command "wget ${WGET_OPTIONS} --no-check-certificate --no-cookies --header \"Cookie: gpw_e24=xxx; oraclelicense=accept-securebackup-cookie;\" -O \"${jce_archive}\" \"${jce_url}\""
     else
       log_err "Could not find curl or wget; aborting..."
