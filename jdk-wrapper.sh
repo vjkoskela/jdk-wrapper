@@ -101,6 +101,9 @@ safe_command() {
 generate_manifest_checksum() {
   l_path=$1
   checksum_exec="exit 1"
+  command -v md5
+  r="$?"
+  echo "r=$r"
   if command -v md5 &> /dev/null; then
     checksum_exec="md5"
   elif command -v sha1sum &> /dev/null; then
