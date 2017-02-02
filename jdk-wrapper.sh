@@ -59,6 +59,7 @@
 #
 # JDKW_VERSION : Version identifier (e.g. 8u65). Required.
 # JDKW_BUILD : Build identifier (e.g. b17). Required.
+# JDKW_TOKEN : Download token (e.g. e9e7ea248e2c4826b92b3f075a80e441). Optional.
 # JDKW_JCE : Include Java Cryptographic Extensions (e.g. false). Optional.
 # JDKW_TARGET : Target directory (e.g. /var/tmp). Optional.
 # JDKW_PLATFORM : Platform specifier (e.g. 'linux-x64'). Optional.
@@ -70,6 +71,8 @@
 # By default the platform is detected using uname.
 # By default the extension dmg is used for Darwin and tar.gz for Linux/Solaris.
 # By default the wrapper does not log.
+#
+# IMPORTANT: The JDKW_TOKEN is required for release 8u121-b13 and newer.
 
 log_err() {
   l_prefix=$(date  +'%H:%M:%S')
@@ -198,7 +201,7 @@ fi
 JAVA_MAJOR_VERSION=$(echo "${JDKW_VERSION}" | sed 's/\([0-9]*\)u[0-9]*/\1/')
 
 # Ensure target directory exists
-if [ ! -d ${JDKW_TARGET} ]; then
+if [ ! -d "${JDKW_TARGET}" ]; then
   log_out "Creating target directory ${JDKW_TARGET}"
   safe_command "mkdir -p \"${JDKW_TARGET}\""
 fi
@@ -214,10 +217,10 @@ manifest="${JDKW_TARGET}/${jdkid}/manifest.checksum"
 if [ -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   if [ -f "${manifest}" ]; then
     log_out "Verifying manifest integrity..."
-    manifest_current="${TMPDIR:-/tmp}/${l_target}-$$.$(rand)"
+    manifest_current="${TMPDIR:-/tmp}/${jdkid}-$$.$(rand)"
     generate_manifest_checksum "${JDKW_TARGET}/${jdkid}" > "${manifest_current}"
-    manifest_checksum=`cat "${manifest}"`
-    manifest_current_checksum=`cat "${manifest_current}"`
+    manifest_checksum=$(cat "${manifest}")
+    manifest_current_checksum=$(cat "${manifest_current}")
     log_out "Previous: ${manifest_checksum}"
     log_out "Current: ${manifest_current_checksum}"
     safe_command "rm -f \"${manifest_current}\""
@@ -246,22 +249,29 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   safe_command "cd \"${JDKW_TARGET}/${jdkid}\""
 
   # JDK
-  jdk_url="http://download.oracle.com/otn-pub/java/jdk/${JDKW_VERSION}-${JDKW_BUILD}/jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}"
+  token_segment=""
+  if [ -n "${JDKW_TOKEN}" ]; then
+    token_segment="${JDKW_TOKEN}/"
+  fi
+  jdk_url="http://download.oracle.com/otn-pub/java/jdk/${JDKW_VERSION}-${JDKW_BUILD}/${token_segment}jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}"
   jdk_archive="jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}"
 
   # Download archive
   log_out "Downloading JDK from ${jdk_url}"
+  download_result=
   if command -v curl > /dev/null; then
-    safe_command "curl ${CURL_OPTIONS} -j -k -L -H \"Cookie: oraclelicense=accept-securebackup-cookie\" -o \"${jdk_archive}\" \"${jdk_url}\""
+    # Do NOT execute with safe_command; undo operations below on failure
+    curl ${CURL_OPTIONS} -j -k -L -H "Cookie: oraclelicense=accept-securebackup-cookie" -o "${jdk_archive}" "${jdk_url}"
+    download_result=$?
   elif command -v wget > /dev/null; then
-    safe_command "wget ${WGET_OPTIONS} --no-check-certificate --no-cookies --header \"Cookie: oraclelicense=accept-securebackup-cookie\" -O \"${jdk_archive}\" \"${jdk_url}\""
+    # Do NOT execute with safe_command; undo operations below on failure
+    wget ${WGET_OPTIONS} --no-check-certificate --no-cookies --header "Cookie: oraclelicense=accept-securebackup-cookie" -O "${jdk_archive}" "${jdk_url}"
+    download_result=$?
   else
     log_err "Could not find curl or wget; aborting..."
-    safe_command "rm -rf \"${JDKW_TARGET}/${jdkid}\""
-    safe_command "cd ${LAST_DIR}"
-    exit 1
+    download_result=-1
   fi
-  if [ $? -ne 0 ]; then
+  if [ ${download_result} -ne 0 ]; then
     log_err "Download failed of ${jdk_url}"
     safe_command "rm -rf \"${JDKW_TARGET}/${jdkid}\""
     safe_command "cd ${LAST_DIR}"
@@ -304,17 +314,20 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
 
     # Download archive
     log_out "Downloading JCE from ${jce_url}"
+    download_result=
     if command -v curl > /dev/null; then
-      safe_command "curl ${CURL_OPTIONS} -j -k -L -H \"Cookie: gpw_e24=xxx; oraclelicense=accept-securebackup-cookie;\" -o \"${jce_archive}\" \"${jce_url}\""
+      # Do NOT execute with safe_command; undo operations below on failure
+      curl ${CURL_OPTIONS} -j -k -L -H "Cookie: gpw_e24=xxx; oraclelicense=accept-securebackup-cookie;" -o "${jce_archive}" "${jce_url}"
+      download_result=$?
     elif command -v wget > /dev/null; then
-      safe_command "wget ${WGET_OPTIONS} --no-check-certificate --no-cookies --header \"Cookie: gpw_e24=xxx; oraclelicense=accept-securebackup-cookie;\" -O \"${jce_archive}\" \"${jce_url}\""
+      # Do NOT execute with safe_command; undo operations below on failure
+      wget ${WGET_OPTIONS} --no-check-certificate --no-cookies --header "Cookie: gpw_e24=xxx; oraclelicense=accept-securebackup-cookie;" -O "${jce_archive}" "${jce_url}"
+      download_result=$?
     else
       log_err "Could not find curl or wget; aborting..."
-      safe_command "rm -rf \"${JDKW_TARGET}/${jdkid}\""
-      safe_command "cd ${LAST_DIR}"
-      exit 1
+      download_result=-1
     fi
-    if [ $? -ne 0 ]; then
+    if [ ${download_result} -ne 0 ]; then
       log_err "Download failed of ${jce_url}"
       safe_command "rm -rf \"${JDKW_TARGET}/${jdkid}\""
       safe_command "cd ${LAST_DIR}"
