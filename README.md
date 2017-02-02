@@ -19,13 +19,14 @@ Usage
 
 Simply set your desired JDK version and wrap your command relying on the JDK with a call to the jdk-wrapper.sh script.
 
-    > JDKW_VERSION=8u65 JDKW_BUILD=b17 jdk-wrapper.sh <CMD>
+    > JDKW_VERSION=8u121 JDKW_BUILD=b13 JDKW_TOKEN=e9e7ea248e2c4826b92b3f075a80e441 jdk-wrapper.sh <CMD>
 
 Alternatively, create a .jdkw properties file in the working directory.
 
 ```
-JDKW_VERSION=8u65
-JDKW_BUILD=b17
+JDKW_VERSION=8u121
+JDKW_BUILD=b13
+JDKW_TOKEN=e9e7ea248e2c4826b92b3f075a80e441
 ```
 
 Then execute jdk-wrapper.sh script without setting the environment variables.
@@ -34,7 +35,7 @@ Then execute jdk-wrapper.sh script without setting the environment variables.
 
 The third option is to pass arguments to jdk-wrapper.sh which define the configuration. Any argument that begins with "JDKW_" will be considered a configuration parameter, everything from the first non-configuration parameter onward is considered part of the command.
 
-    > jdk-wrapper.sh JDKW_VERSION=8u65 JDKW_BUILD=13 <CMD>
+    > jdk-wrapper.sh JDKW_VERSION=8u121 JDKW_BUILD=13 JDKW_TOKEN=e9e7ea248e2c4826b92b3f075a80e441 <CMD>
 
 Finally, any combination of these three forms of configuration is permissible. Any environment variables override the values in the .jdkw file and any values specified on the command line override both the environment and the .jdkw file.
 
@@ -46,6 +47,7 @@ Regardless of how the configuration is specified it supports the following:
 
 * JDKW_VERSION : Version identifier (e.g. '8u65'). Required.
 * JDKW_BUILD : Build identifier (e.g. 'b17'). Required.
+* JDKW_TOKEN : Download token (e.g. e9e7ea248e2c4826b92b3f075a80e441). Optional.
 * JDKW_JCE : Include Java Cryptographic Extensions (e.g. false). Optional.
 * JDKW_TARGET : Target directory (e.g. '/var/tmp'). Optional.
 * JDKW_PLATFORM : Platform specifier (e.g. 'linux-x64'). Optional.
@@ -58,6 +60,8 @@ By default the Java Cryptographic Extensions are included.
 By default the extension dmg is used for Darwin and tar.gz for other platforms.<br/>
 By default the wrapper does not log.
 
+**IMPORTANT**: The JDKW_TOKEN is required for release 8u121-b13 and newer.
+
 ### Version and Build
 
 The desired version and build of the Oracle JDK may be determined as follows:
@@ -68,7 +72,7 @@ The desired version and build of the Oracle JDK may be determined as follows:
 * Accept the associated license agreement.
 * Hover over one of the download links.
 
-All the links contain a path element named {MAJOR}u{MINOR}-{BUILD}, for example _8u73-b02_ where _8u73_ would be used as the value for JDKW_VERSION and _b02_ the value for JDKW_BUILD.
+All the links contain a path element named {MAJOR}u{MINOR}-{BUILD}, for example _8u73-b02_ where _8u73_ would be used as the value for JDKW_VERSION and _b02_ the value for JDKW_BUILD. For versions 8u121-b13 and higher the link contains an alpha-numeric path segment that looks like _e9e7ea248e2c4826b92b3f075a80e441_ which needs to be set as the JDKW_TOKEN.
 
 Archived versions of JDK8 are [listed here](http://www.oracle.com/technetwork/java/javase/downloads/java-archive-javase8-2177648.html).
 
@@ -91,8 +95,9 @@ Second, configure the JDKW_VERSION and JDKW_BUILD environment variables to speci
 ```yml
 env:
   global:
-  - JDKW_VERSION=8u65
-  - JDKW_BUILD=b17
+  - JDKW_VERSION=8u121
+  - JDKW_BUILD=b13
+  - JDKW_TOKEN=e9e7ea248e2c4826b92b3f075a80e441
 ```
 
 To create a matrix build against multiple versions of the Oracle JDK simply specify the environment variables like this:
@@ -100,7 +105,7 @@ To create a matrix build against multiple versions of the Oracle JDK simply spec
 ```yml
 env:
   - JDKW_VERSION=7u79 JDKW_BUILD=b15
-  - JDKW_VERSION=8u74 JDKW_BUILD=b02
+  - JDKW_VERSION=8u121 JDKW_BUILD=b13 JDKW_TOKEN=e9e7ea248e2c4826b92b3f075a80e441
 ```
 
 Finally, invoke your build command using the jdk-wrapper script. The following assumes you have downloaded and included jdk-wrapper.sh in your project.
@@ -121,7 +126,7 @@ If your repository contains a .jdkw properties file it is __not__ sufficient to 
  
 ```yml
 script:
-- ./jdk-wrapper.sh JDKW_VERSION=${JDKW_VERSION} JDKW_BUILD=${JDKW_BUILD} mvn install
+- ./jdk-wrapper.sh JDKW_VERSION=${JDKW_VERSION} JDKW_BUILD=${JDKW_BUILD} JDKW_TOKEN=${JDKW_TOKEN} mvn install
 ```
 
 This is most commonly the case when you have a JDK version that you develop against (typically the latest) specified in .jdkw but desire a build which validates against multiple (older) JDK versions.
