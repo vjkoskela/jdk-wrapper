@@ -170,6 +170,12 @@ if [ -z "${JDKW_PLATFORM}" ]; then
       else
         JDKW_PLATFORM="linux-i586"
       fi
+    elif [[ $os == MSYS_NT* ]]; then
+      if [ "${architecture}" = "x86_64" ]; then
+        JDKW_PLATFORM="windows-x64"
+      else
+        JDKW_PLATFORM="windows-i586"
+      fi
     elif [ "${os}" = "SunOS" ]; then
       if [ "${architecture}" = "sparc64" ]; then
         JDKW_PLATFORM="solaris-sparcv9"
