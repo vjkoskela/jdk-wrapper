@@ -35,7 +35,7 @@ Then execute jdk-wrapper.sh script without setting the environment variables.
 
 The third option is to pass arguments to jdk-wrapper.sh which define the configuration. Any argument that begins with "JDKW_" will be considered a configuration parameter, everything from the first non-configuration parameter onward is considered part of the command.
 
-    > jdk-wrapper.sh JDKW_VERSION=8u121 JDKW_BUILD=13 JDKW_TOKEN=e9e7ea248e2c4826b92b3f075a80e441 <CMD>
+    > jdk-wrapper.sh JDKW_VERSION=8u121 JDKW_BUILD=b13 JDKW_TOKEN=e9e7ea248e2c4826b92b3f075a80e441 <CMD>
 
 Finally, any combination of these three forms of configuration is permissible. Any environment variables override the values in the .jdkw file and any values specified on the command line override both the environment and the .jdkw file.
 

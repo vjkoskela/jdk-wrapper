@@ -26,14 +26,14 @@
 # with a call to the jdk_wrapper.sh script.
 #
 # e.g.
-# > JDKW_VERSION=8u65 JDKW_BUILD=13 jdk-wrapper.sh <CMD>
+# > JDKW_VERSION=8u65 JDKW_BUILD=b13 jdk-wrapper.sh <CMD>
 #
 # Alternatively, create a file called .jdkw in the working directory with the
 # configuration properties.
 #
 # e.g.
 # JDKW_VERSION=8u65
-# JDKW_BUILD=13
+# JDKW_BUILD=b13
 #
 # Then wrap your command:
 #
@@ -46,7 +46,7 @@
 # onward is considered part of the command.
 #
 # e.g.
-# > jdk-wrapper.sh JDKW_VERSION=8u65 JDKW_BUILD=13 <CMD>
+# > jdk-wrapper.sh JDKW_VERSION=8u65 JDKW_BUILD=b13 <CMD>
 #
 # Finally, any combination of these three forms of configuration is permissible.
 # Any environment variables override the values in the .jdkw file and any values
