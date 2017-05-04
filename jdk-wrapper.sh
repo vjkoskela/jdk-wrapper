@@ -116,6 +116,18 @@ generate_manifest_checksum() {
 CURL_OPTIONS=""
 WGET_OPTIONS=""
 
+# Check latest JDK version
+CHECK_JDK_SH="check-latest-jdk.sh"
+CHECK_JDK_SOURCE="https://raw.githubusercontent.com/coreen/Bash/master/check-latest-jdk.sh"
+CHECK_JDK_PATH="./${CHECK_JDK_SH}"
+curl "${CHECK_JDK_SOURCE}" -o "${CHECK_JDK_SH}" --silent --location --connect-timeout 1 --max-time 1
+if [ ! -f "${CHECK_JDK_PATH}" ]; then
+  printf "ERROR: Unable to initialize check-jdk script\\n"
+  exit 1
+fi
+chmod +x "${CHECK_JDK_PATH}"
+./"${CHECK_JDK_PATH}"
+
 # Load properties file
 if [ -f .jdkw ]; then
   . ./.jdkw
