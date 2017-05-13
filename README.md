@@ -67,11 +67,13 @@ Regardless of how the configuration is specified it supports the following:
 The default target directory is ~/.jdk.<br/>
 The default platform is detected using uname.<br/>
 By default the Java Cryptographic Extensions are included.<br/>
-By default the extension dmg is used for Darwin and tar.gz for other platforms.<br/>
+By default the extension dmg is used for Darwin and tar.gz for other platforms.(*)<br/>
 By default the source url is from Oracle</br>
 By default the wrapper does not log.
 
 **IMPORTANT**: The JDKW_TOKEN is required for release 8u121-b13 and newer.
+
+(*)For JDK versions 6 and prior, the default extension used for all platfo    rms is bin
 
 ### Version and Build
 
