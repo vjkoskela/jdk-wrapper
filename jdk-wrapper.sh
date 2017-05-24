@@ -22,6 +22,15 @@
 
 # ** USAGE **
 #
+# IMPORTANT: Sometime in May 2017 Oracle started requiring an OTN account
+# for downloading anything but the latest JDK version. Thus far, efforts to
+# integrate OTN login into jdk-wrapper have not succeeded. In the short-term
+# either stick to the latest JDK version and/or cache JDKs elsewhere and use
+# JDKW_SOURCE to specify the download uri format.
+#
+# e.g.
+# > JDKW_SOURCE='http://artifactory.example.com/jdk/jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}' JDKW_VERSION=8u121 JDKW_BUILD=b13 ./jdk-wrapper.sh <CMD>
+#
 # Simply set your desired JDK and wrap your command relying on the JDK
 # with a call to the jdk_wrapper.sh script.
 #
@@ -64,12 +73,14 @@
 # JDKW_TARGET : Target directory (e.g. /var/tmp). Optional.
 # JDKW_PLATFORM : Platform specifier (e.g. 'linux-x64'). Optional.
 # JDKW_EXTENSION : Archive extension (e.g. 'tar.gz'). Optional.
+# JDKW_SOURCE : Source url format for download. Optional.
 # JDKW_VERBOSE : Log wrapper actions to standard out. Optional.
 #
 # By default the Java Cryptographic Extensions are included.
 # By default the target directory is ~/.jdk.
 # By default the platform is detected using uname.
 # By default the extension dmg is used for Darwin and tar.gz for Linux/Solaris.
+# By default the source url is from Oracle</br>
 # By default the wrapper does not log.
 #
 # IMPORTANT: The JDKW_TOKEN is required for release 8u121-b13 and newer.
@@ -191,8 +202,11 @@ if [ "${JDKW_PLATFORM}" = "macosx-x64" ]; then
 fi
 if [ -z "${JDKW_EXTENSION}" ]; then
   JDKW_EXTENSION=${extension}
-else
   log_out "Defaulted to extension ${JDKW_EXTENSION}"
+fi
+if [ -z "${JDKW_SOURCE}" ]; then
+    JDKW_SOURCE='http://download.oracle.com/otn-pub/java/jdk/${JDKW_VERSION}-${JDKW_BUILD}/${token_segment}jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}'
+    log_out "Defaulted to source ${JDKW_SOURCE}"
 fi
 if [ -z "${JDKW_VERBOSE}" ]; then
   CURL_OPTIONS="${CURL_OPTIONS} --silent"
@@ -253,7 +267,7 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   if [ -n "${JDKW_TOKEN}" ]; then
     token_segment="${JDKW_TOKEN}/"
   fi
-  jdk_url="http://download.oracle.com/otn-pub/java/jdk/${JDKW_VERSION}-${JDKW_BUILD}/${token_segment}jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}"
+  eval "jdk_url=\"${JDKW_SOURCE}\""
   jdk_archive="jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}"
 
   # Download archive

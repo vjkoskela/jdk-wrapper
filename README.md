@@ -5,7 +5,8 @@ __DISCLAIMER__
 
 _By using this script you agree to the license agreement specified for all
 versions of the Oracle JDK you invoke this script for. The author(s) assume no
-responsibility for compliance with the Oracle JDK license agreement. Please see [LICENSE](LICENSE) for additional conditions of use._
+responsibility for compliance with the Oracle JDK license agreement. Please see
+[LICENSE](LICENSE) for additional conditions of use._
 
 <a href="https://travis-ci.org/vjkoskela/jdk-wrapper/">
     <img src="https://travis-ci.org/vjkoskela/jdk-wrapper.png"
@@ -13,6 +14,14 @@ responsibility for compliance with the Oracle JDK license agreement. Please see 
 </a>
 
 Provides automatic download, unpacking and usage of specific Oracle JDK versions to faciliate repeatable builds of Java based software.
+
+**IMPORTANT**: Sometime in May 2017 Oracle started requiring an OTN account for downloading anything but the latest 
+JDK version. Thus far, efforts to integrate OTN login into jdk-wrapper have not succeeded. 
+
+In the short-term either stick to the latest JDK version and/or cache JDKs elsewhere (e.g. Artifactory, Nexus, S3, etc.) and use 
+`JDKW_SOURCE` parameter to specify the download uri format. For example:
+
+    > JDKW_SOURCE='http://artifactory.example.com/jdk/jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}' JDKW_VERSION=8u121 JDKW_BUILD=b13 jdk-wrapper.sh <CMD>
 
 Usage
 -----
@@ -52,12 +61,14 @@ Regardless of how the configuration is specified it supports the following:
 * JDKW_TARGET : Target directory (e.g. '/var/tmp'). Optional.
 * JDKW_PLATFORM : Platform specifier (e.g. 'linux-x64'). Optional.
 * JDKW_EXTENSION : Archive extension (e.g. 'tar.gz'). Optional.
+* JDKW_SOURCE : Source url format for download. Optional.
 * JDKW_VERBOSE : Log wrapper actions to standard out. Optional.
 
 The default target directory is ~/.jdk.<br/>
 The default platform is detected using uname.<br/>
-By default the Java Cryptographic Extensions are included.
+By default the Java Cryptographic Extensions are included.<br/>
 By default the extension dmg is used for Darwin and tar.gz for other platforms.<br/>
+By default the source url is from Oracle</br>
 By default the wrapper does not log.
 
 **IMPORTANT**: The JDKW_TOKEN is required for release 8u121-b13 and newer.
