@@ -121,7 +121,7 @@ generate_manifest_checksum() {
     checksum_exec="sha1sum"
   fi
   l_escaped_path=$(printf '%s' "${l_path}" | sed -e 's@/@\\\/@g')
-  echo `find "${l_path}" -type f \( -iname "*" ! -iname "manifest.checksum" \) -print0 |  xargs -0 ls -l | awk '{print $5, $9}' | sort | sed 's/^\(0-9\)* '"${l_escaped_path}"'\/\(.*\)$/\1 \2/' | {checksum_exec}`
+  echo `find "${l_path}" -type f \( -iname "*" ! -iname "manifest.checksum" \) -print0 |  xargs -0 ls -l | awk '{print $5, $9}' | sort | sed 's/^\(0-9\)* '"${l_escaped_path}"'\/\(.*\)$/\1 \2/' | ${checksum_exec}`
 }
 
 # Default curl/wget options
