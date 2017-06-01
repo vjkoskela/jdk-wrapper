@@ -79,11 +79,13 @@
 # By default the Java Cryptographic Extensions are included.
 # By default the target directory is ~/.jdk.
 # By default the platform is detected using uname.
-# By default the extension dmg is used for Darwin and tar.gz for Linux/Solaris.
+# By default the extension dmg is used for Darwin and tar.gz for Linux/Solaris.(*)
 # By default the source url is from Oracle</br>
 # By default the wrapper does not log.
 #
 # IMPORTANT: The JDKW_TOKEN is required for release 8u121-b13 and newer.
+#
+# (*)For JDK versions 6 and prior, the default extension used for all platforms is bin.
 
 log_err() {
   l_prefix=$(date  +'%H:%M:%S')
@@ -201,6 +203,10 @@ extension="tar.gz"
 if [ "${JDKW_PLATFORM}" = "macosx-x64" ]; then
   extension="dmg"
 fi
+# JDK 6 and before use .bin extension optionally wrapping an rpm, note no specific macosx download available for these versions (using linux)
+if [ "${JDKW_VERSION%u*}" -le "6" ]; then
+  extension="bin"
+fi
 if [ -z "${JDKW_EXTENSION}" ]; then
   JDKW_EXTENSION=${extension}
   log_out "Defaulted to extension ${JDKW_EXTENSION}"
@@ -313,6 +319,11 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
     safe_command "rm -rf \"${jdk}\""
     safe_command "rm -rf \"javaappletplugin.pkg\""
     JAVA_HOME="${JDKW_TARGET}/${jdkid}/Contents/Home"
+  elif [ "${JDKW_EXTENSION}" = "bin" ]; then
+    safe_command "chmod +x \"${jdk_archive}\""
+    safe_command "./\"${jdk_archive}\""
+    safe_command "rm -f \"${jdk_archive}\""
+    JAVA_HOME="${JDKW_TARGET}/${jdkid}/bin"
   else
     log_err "Unsupported extension ${JDKW_EXTENSION}"
     safe_command "cd ${LAST_DIR}"
