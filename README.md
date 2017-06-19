@@ -75,7 +75,11 @@ By default the wrapper does not log.
 
 ### Version and Build
 
-The desired version and build of the Oracle JDK may be determined as follows:
+An extra check is done during script execution to see if you are on the latest version of the Oracle JDK. A warning will be outputted if project jdk version is out of date. For more information, see:
+
+https://github.com/coreen/Bash/blob/master/check-latest-jdk.sh
+
+If you wish to update or want to use a custom version of jdk, the desired version and build of the Oracle JDK may be determined as follows:
 
 * Browse to the [Java SE Downloads](http://www.oracle.com/technetwork/java/javase/downloads/index.html) page.
 * Click the "JDK Download" button on the right.
