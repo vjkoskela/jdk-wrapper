@@ -15,13 +15,25 @@ responsibility for compliance with the Oracle JDK license agreement. Please see
 
 Provides automatic download, unpacking and usage of specific Oracle JDK versions to faciliate repeatable builds of Java based software.
 
-**IMPORTANT**: Sometime in May 2017 Oracle started requiring an OTN account for downloading anything but the latest 
-JDK version. Thus far, efforts to integrate OTN login into jdk-wrapper have not succeeded. 
-
-In the short-term either stick to the latest JDK version and/or cache JDKs elsewhere (e.g. Artifactory, Nexus, S3, etc.) and use 
-`JDKW_SOURCE` parameter to specify the download uri format. For example:
+**IMPORTANT**: Sometime in May 2017 Oracle started requiring an Oracle Technology Network (OTN) account for downloading anything but the latest 
+JDK version. To work around this either:
+ 
+ 1) Manually download and cache the JDKs elsewhere (e.g. Artifactory, Nexus, S3, etc.) and use the `JDKW_SOURCE` to specify the location. For example:
 
     > JDKW_SOURCE='http://artifactory.example.com/jdk/jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}' JDKW_VERSION=8u121 JDKW_BUILD=b13 jdk-wrapper.sh <CMD>
+ 
+ 2) Specify OTN credentials by using the `JDKW_USERNAME` and `JDKW_PASSWORD` arguments. For example:
+                                                                                                    
+    > JDKW_USERNAME=me@example.com JDKW_PASSWORD=secret JDKW_VERSION=8u121 JDKW_BUILD=b13 jdk-wrapper.sh <CMD>
+
+If the JDK is not found in the local cache, then an attempt is made to download it from the user specified source if provided. If that attempt fails or is skipped,
+the next attempt uses the publicly available endpoint at Oracle (where only the latest version is available). If that attempt fails, the final step uses
+the OTN credentials to login and attempt download via the secure OTN endpoint at Oracle if credentials were provided. 
+
+You will likely want developers (or some subset of developers) using the OTN login version via the __.jdkw__ file in their home directory (e.g. for testing
+JDK upgrades before making them available) while other developers and headless builds (e.g. Jenkins, Travis, Code Build, etc.) use your private cloud/on-prem cached version. As with
+any use of this script **you** are responsible for compliance with the Oracle JDK license agreement and the OTN end user license agreement and any other
+agreements to which you are bound.
 
 Usage
 -----
@@ -30,12 +42,20 @@ Simply set your desired JDK version and wrap your command relying on the JDK wit
 
     > JDKW_VERSION=8u121 JDKW_BUILD=b13 JDKW_TOKEN=e9e7ea248e2c4826b92b3f075a80e441 jdk-wrapper.sh <CMD>
 
-Alternatively, create a .jdkw properties file in the working directory.
+You can also set global values with a .jdkw properties file in your home directory.
 
 ```
 JDKW_VERSION=8u121
 JDKW_BUILD=b13
 JDKW_TOKEN=e9e7ea248e2c4826b92b3f075a80e441
+```
+
+Alternatively, create a .jdkw properties file in the working directory.
+
+```
+JDKW_VERSION=8u131
+JDKW_BUILD=b11
+JDKW_TOKEN=d54c1d3a095b4ff2b6607d096fa80163
 ```
 
 Then execute jdk-wrapper.sh script without setting the environment variables.
@@ -46,7 +66,12 @@ The third option is to pass arguments to jdk-wrapper.sh which define the configu
 
     > jdk-wrapper.sh JDKW_VERSION=8u121 JDKW_BUILD=b13 JDKW_TOKEN=e9e7ea248e2c4826b92b3f075a80e441 <CMD>
 
-Finally, any combination of these three forms of configuration is permissible. Any environment variables override the values in the .jdkw file and any values specified on the command line override both the environment and the .jdkw file.
+Finally, any combination of these four forms of configuration is permissible. The order of precedence from highest to lowest is:
+
+1) Command Line
+2) .jdkw (working directory)
+3) ~/.jdkw (home directory)
+4) Environment
 
 The wrapper script will download and cache the specified JDK version and set JAVA_HOME appropriately before executing the specified command.
 
@@ -62,6 +87,8 @@ Regardless of how the configuration is specified it supports the following:
 * JDKW_PLATFORM : Platform specifier (e.g. 'linux-x64'). Optional.
 * JDKW_EXTENSION : Archive extension (e.g. 'tar.gz'). Optional.
 * JDKW_SOURCE : Source url format for download. Optional.
+* JDKW_USERNAME: Username for OTN sign-on. Optional.
+* JDKW_PASSWORD: Password for OTN sign-on. Optional.
 * JDKW_VERBOSE : Log wrapper actions to standard out. Optional.
 
 The default target directory is ~/.jdk.<br/>
@@ -141,6 +168,21 @@ script:
 ```
 
 This is most commonly the case when you have a JDK version that you develop against (typically the latest) specified in .jdkw but desire a build which validates against multiple (older) JDK versions.
+
+Prerequisites
+-------------
+
+The jdk-wrapper script may work with other versions or with suitable replacements but has been tested with these:
+
+* posix shell: bash (4.4.12), BusyBox (1.25.1)
+* awk (4.1.4)
+* curl (7.51.0)
+* grep (3.0)
+* sed (4.4)
+* sort (8.27)
+* sha1sum (8.27) or md5
+
+Plus tools for extracting files from the target archive type (e.g. tar.gz, dmg, etc.) such as gzip, tar or xar (for example).
 
 License
 -------
