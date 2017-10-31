@@ -98,7 +98,12 @@ By default the extension dmg is used for Darwin and tar.gz for other platforms.<
 By default the source url is from Oracle</br>
 By default the wrapper does not log.
 
-**IMPORTANT**: The JDKW_TOKEN is required for release 8u121-b13 and newer.
+NOTE: As of JDK version 9 the Java Cryptographic Extensions are bundled with the
+JDK and are not downloaded separately. Therefore, the value of JDKW_JCE is
+ignored for JDK 9.
+
+**IMPORTANT**: The JDKW_TOKEN is required for release 8u121-b13 and newer but
+not after JDK 9.0.1 (as of 10/30/17).
 
 ### Version and Build
 

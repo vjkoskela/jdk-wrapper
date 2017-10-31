@@ -96,14 +96,19 @@
 # JDKW_PASSWORD: Password for OTN sign-on. Optional.
 # JDKW_VERBOSE : Log wrapper actions to standard out. Optional.
 #
-# By default the Java Cryptographic Extensions are included.
+# By default the Java Cryptographic Extensions are included*.
 # By default the target directory is ~/.jdk.
 # By default the platform is detected using uname.
 # By default the extension dmg is used for Darwin and tar.gz for Linux/Solaris.
 # By default the source url is from Oracle</br>
 # By default the wrapper does not log.
 #
-# IMPORTANT: The JDKW_TOKEN is required for release 8u121-b13 and newer.
+# * As of JDK version 9 the Java Cryptographic Extensions are bundled with the
+# JDK and are not downloaded separately. Therefore, the value of JDKW_JCE is
+# ignored for JDK 9.
+#
+# IMPORTANT: The JDKW_TOKEN is required for release 8u121-b13 and newer but
+# is not required for JDK 9.0.1 or newer (as of 10/30/17).
 
 log_err() {
   l_prefix=$(date  +'%H:%M:%S')
@@ -152,39 +157,53 @@ encode() {
 
 otn_extract() {
   l_file=$1
-  echo $(grep -o '<[^<]*input[^>]*.' "${l_file}" | grep 'type="hidden"' | sed 's/.*name="\([^"]*\)"[ ]*value="\([^"]*\)".*/\1=\2/' | xargs -I {} curl -s -o /dev/null -w %{url_effective} --get --data-urlencode "{}" "" | sed 's/\/?\([^\/?]*\)/\1\&/g')
+  echo $(grep -o '<[^<]*input[^>]*.' "${l_file}" | grep 'type="hidden"' | sed '/.*name="\([^"]*\)"[ ]*value="\([^"]*\)".*/!d;s//\1=\2/' | xargs -I {} curl -s -o /dev/null -w %{url_effective} --get --data-urlencode "{}" "" | sed 's/\/?\([^\/?]*\)/\1\&/g')
 }
 
 otn_signon() {
-  l_username=$(encode "ssousername=$1")
-  l_password=$(encode "password=$2")
+  l_username=$(encode "userid=$1")
+  l_password=$(encode "pass=$2")
 
   l_cookiejar="${TMPDIR:-/tmp}/otn.cookiejar-$$.$(rand)"
   l_redirectform="${TMPDIR:-/tmp}/otn.redirectform-$$.$(rand)"
   l_signon="${TMPDIR:-/tmp}/otn.signon-$$.$(rand)"
+  l_credsubmit="${TMPDIR:-/tmp}/otn.credsubmit-$$.$(rand)"
 
   if [ -f "${l_cookiejar}" ]; then
     rm -f "${l_cookiejar}"
   fi
 
+  # Download the homepage
+  log_out "OTN Login: Getting homepage..."
+  curl ${CURL_OPTIONS} -H "User-Agent:${OTN_USER_AGENT}" -k -L -c "${l_cookiejar}" -o /dev/null https://www.oracle.com
+
   # Download and parse the redirect
   log_out "OTN Login: Getting redirect..."
-  curl ${CURL_OPTIONS} -H "User-Agent:${OTN_USER_AGENT}" -k -L -c "${l_cookiejar}" -o "${l_redirectform}" http://www.oracle.com/webapps/redirect/signon?nexturl=
+  curl ${CURL_OPTIONS} -H "User-Agent:${OTN_USER_AGENT}" -k -L -c "${l_cookiejar}" -b "${l_cookiejar}" -o "${l_redirectform}" http://www.oracle.com/webapps/redirect/signon?nexturl=https://www.oracle.com/index.html?
   redirect_data=$(otn_extract "${l_redirectform}")
 
   # Redirect to the sign-on form
   log_out "OTN Login: Getting sign-on..."
-  curl ${CURL_OPTIONS} -H "User-Agent:${OTN_USER_AGENT}" -k -L -c "${l_cookiejar}" -b "${l_cookiejar}" -o "${l_signon}" -d "${redirect_data}" https://login.oracle.com/mysso/signon.jsp
+  curl ${CURL_OPTIONS} -H "User-Agent:${OTN_USER_AGENT}" -k -L -c "${l_cookiejar}" -b "${l_cookiejar}" -o "${l_signon}" -d "${redirect_data}" https://login.oracle.com:443/oaam_server/oamLoginPage.jsp
   signon_data=$(otn_extract "${l_signon}")
   signon_data="${signon_data}${l_username}&"
   signon_data="${signon_data}&${l_password}&"
 
   # Post the sign-on form
   log_out "OTN Login: Posting login..."
-  curl ${CURL_OPTIONS} -H "User-Agent:${OTN_USER_AGENT}" -k -L -c "${l_cookiejar}" -b "${l_cookiejar}" -X POST -d "${signon_data}" --referer https://login.oracle.com/mysso/signon.jsp -o /dev/null https://login.oracle.com/oam/server/sso/auth_cred_submit
+  curl ${CURL_OPTIONS} -H "User-Agent:${OTN_USER_AGENT}" -k -L -c "${l_cookiejar}" -b "${l_cookiejar}" -X POST -d "${signon_data}" --referer https://login.oracle.com:443/oaam_server/oamLoginPage.jsp -o /dev/null https://login.oracle.com:443/oaam_server/loginAuth.do
 
   # Add the accept cookie to the jar
   printf ".oracle.com\tTRUE\t/\tFALSE\t0\toraclelicense\taccept-securebackup-cookie\n" >> "${l_cookiejar}"
+
+  # Complete the sign-on
+  log_out "OTN Login: Completing login..."
+  curl ${CURL_OPTIONS} -H "User-Agent:${OTN_USER_AGENT}" -k -L -c "${l_cookiejar}" -b "${l_cookiejar}" -X POST -d "${signon_data}" --referer https://login.oracle.com:443/oaam_server/loginAuth.do -o "${l_credsubmit}" https://login.oracle.com:443/oaam_server/authJump.do?jump=false
+  credsubmit_data=$(otn_extract "${l_credsubmit}")
+
+  sleep 3
+  
+  curl ${CURL_OPTIONS} -H "User-Agent:${OTN_USER_AGENT}" -k -L -c "${l_cookiejar}" -b "${l_cookiejar}" -X POST -d "${credsubmit_data}" --referer https://login.oracle.com:443/oaam_server/authJump.do -o /dev/null https://login.oracle.com:443/oam/server/dap/cred_submit
 
   # Return the filled cookie jar
   rm "${l_redirectform}"
@@ -194,10 +213,6 @@ otn_signon() {
 
 # Default curl options
 CURL_OPTIONS=""
-
-# Default JDK locations
-LATEST_JDKW_SOURCE='http://download.oracle.com/otn-pub/java/jdk/${JDKW_VERSION}-${JDKW_BUILD}/${token_segment}jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}'
-ARCHIVED_JDKW_SOURCE='https://download.oracle.com/otn/java/jdk/${JDKW_VERSION}-${JDKW_BUILD}/${token_segment}jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}'
 
 # Default user agent
 OTN_USER_AGENT='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36'
@@ -234,11 +249,15 @@ if [ -z "${JDKW_VERSION}" ]; then
   log_err "Required JDKW_VERSION (e.g. 8u65) environment variable not set"
   exit 1
 fi
+JAVA_MAJOR_VERSION=$(echo "${JDKW_VERSION}" | sed 's/\([0-9]*\).*/\1/')
 if [ -z "${JDKW_BUILD}" ]; then
   log_err "Required JDKW_BUILD (e.g. b17) environment variable not set"
   exit 1
 fi
-if [ -z "${JDKW_JCE}" ]; then
+if [ "${JAVA_MAJOR_VERSION}" = "9" ]; then
+  JDKW_JCE=
+  log_out "Forced to no jce"
+elif [ -z "${JDKW_JCE}" ]; then
   JDKW_JCE="true"
   log_out "Defaulted to jce ${JDKW_JCE}"
 fi
@@ -254,7 +273,11 @@ if [ -z "${JDKW_PLATFORM}" ]; then
     exit 1
   else
     if [ "${os}" = "Darwin" ]; then
-      JDKW_PLATFORM="macosx-x64"
+      if [ "${JAVA_MAJOR_VERSION}" = "9" ]; then
+        JDKW_PLATFORM="osx-x64"
+      else
+        JDKW_PLATFORM="macosx-x64"
+      fi
     elif [ "${os}" = "Linux" ]; then
       if [ "${architecture}" = "x86_64" ]; then
         JDKW_PLATFORM="linux-x64"
@@ -279,6 +302,8 @@ fi
 extension="tar.gz"
 if [ "${JDKW_PLATFORM}" = "macosx-x64" ]; then
   extension="dmg"
+elif [ "${JDKW_PLATFORM}" = "osx-x64" ]; then
+  extension="dmg"
 fi
 if [ -z "${JDKW_EXTENSION}" ]; then
   JDKW_EXTENSION=${extension}
@@ -287,7 +312,15 @@ fi
 if [ -z "${JDKW_VERBOSE}" ]; then
   CURL_OPTIONS="${CURL_OPTIONS} --silent"
 fi
-JAVA_MAJOR_VERSION=$(echo "${JDKW_VERSION}" | sed 's/\([0-9]*\)u[0-9]*/\1/')
+
+# Default JDK locations
+if [ "${JAVA_MAJOR_VERSION}" = "9" ]; then
+  LATEST_JDKW_SOURCE='http://download.oracle.com/otn-pub/java/jdk/${JDKW_VERSION}+${JDKW_BUILD}/jdk-${JDKW_VERSION}_${JDKW_PLATFORM}_bin.${JDKW_EXTENSION}'
+  ARCHIVED_JDKW_SOURCE='http://download.oracle.com/otn/java/jdk/${JDKW_VERSION}+${JDKW_BUILD}/jdk-${JDKW_VERSION}_${JDKW_PLATFORM}_bin.${JDKW_EXTENSION}'
+else
+  LATEST_JDKW_SOURCE='http://download.oracle.com/otn-pub/java/jdk/${JDKW_VERSION}+${JDKW_BUILD}/${token_segment}jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}'
+  ARCHIVED_JDKW_SOURCE='http://download.oracle.com/otn/java/jdk/${JDKW_VERSION}-${JDKW_BUILD}/${token_segment}jdk-${JDKW_VERSION}-${JDKW_PLATFORM}.${JDKW_EXTENSION}'
+fi
 
 # Ensure target directory exists
 if [ ! -d "${JDKW_TARGET}" ]; then
@@ -395,8 +428,8 @@ if [ ! -f "${JDKW_TARGET}/${jdkid}/environment" ]; then
   log_out "Unpacking ${JDKW_EXTENSION}..."
   if [ "${JDKW_EXTENSION}" = "tar.gz" ]; then
     safe_command "tar -xzf \"${jdk_archive}\""
-    package=$(ls | grep "jdk[^-].*" | head -n 1)
     safe_command "rm -f \"${jdk_archive}\""
+    package=$(ls | grep "jdk.*" | head -n 1)
     JAVA_HOME="${JDKW_TARGET}/${jdkid}/${package}"
   elif [ "${JDKW_EXTENSION}" = "dmg" ]; then
     result=$(hdiutil attach "${jdk_archive}" | grep "/Volumes/.*")
