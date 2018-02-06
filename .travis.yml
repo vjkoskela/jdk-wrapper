@@ -13,5 +13,5 @@ env:
 install: true
 script:
 - ./jdk-wrapper.sh JDKW_VERBOSE=1 JDKW_VERSION=${JDKW_VERSION} JDKW_BUILD=${JDKW_BUILD} JDKW_TOKEN=${JDKW_TOKEN} javac -version
-- if [ "$(./jdk-wrapper.sh JDKW_VERSION=${JDKW_VERSION} JDKW_BUILD=${JDKW_BUILD} JDKW_TOKEN=${JDKW_TOKEN} javac -version 2>&1 | tail -n 1)" != "javac ${EXPECTED_VERSION}" ]; then exit 1;
+- if [ "$(./jdk-wrapper.sh JDKW_VERSION=${JDKW_VERSION} JDKW_BUILD=${JDKW_BUILD} JDKW_TOKEN=${JDKW_TOKEN} javac -version 2>&1 | grep "javac.*" | tail -n 1)" != "javac ${EXPECTED_VERSION}" ]; then exit 1;
   fi;
