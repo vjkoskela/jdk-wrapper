@@ -498,4 +498,11 @@ fi
 # Execute the provided command
 log_out "Executing: ${COMMAND}"
 eval ${COMMAND}
-exit $?
+ret=$?
+
+# Output deprecation notice
+printf "\e[0;31m[IMPORTANT]\e[0m This version of JDK Wrapper is end of life.\n"
+printf "\e[0;32mUpgrade to the new version by following this migration guide:\e[0m\n"
+printf "https://github.com/KoskiLabs/jdk-wrapper/blob/master/MIGRATION.md"
+
+exit ${ret}
